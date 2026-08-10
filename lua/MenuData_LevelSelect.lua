@@ -2,8 +2,6 @@
 // compatible with 2.1 and 2.2 because
 // ( look at the input code)
 
-setfenv(1, luamenu)
-
 local scroll = 0
 local row = 1
 local xSel = 1

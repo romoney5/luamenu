@@ -2,8 +2,6 @@
 --this does rely on some custom native functions though, so if you don't have
 --the right build, this is as good as useless
 
-setfenv(1, luamenu)
-
 --network stuff is always gonna involve some loading,
 --the user deserves a pretty loading spinner
 local spinner_time = 0

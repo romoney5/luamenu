@@ -1,8 +1,6 @@
 --generic class inspired by angry birds
 
-luamenu.MenuClass = {}
-
-local MenuClass = luamenu.MenuClass
+MenuClass = {}
 
 setmetatable(MenuClass, MenuClass)
 -- registerMetatable(MenuClass) --Listen!

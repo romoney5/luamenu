@@ -1,22 +1,5 @@
 --the actual menu data
 
-setfenv(1, luamenu)
-
---xorshift prng i found off of temu
-local randomState = 0xBADE4404
-local function __internal_prng__()
-	randomState = $ ^^ ($ >> 13)
-	randomState = $ ^^ ($ >> 11)
-	randomState = $ ^^ ($ << 21)
-
-	return ((randomState * 36548569) >> 4) & (FU - 1) --what the pigma
-end
-
---not tested if this works perfectly
-local function M_RandomRange(a, b)
-	return ((__internal_prng__() * (b - a + 1)) >> FRACBITS) + a
-end
-
 
 local function new_menu(name, data)
 	menus[name] = data
