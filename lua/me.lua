@@ -10,6 +10,7 @@ local cv_menucolor = CV_FindVar("menucolor")
 local v = {}
 
 local current_menu = "MainMenu"
+local current_popup
 
 local next_action
 
@@ -19,11 +20,20 @@ local function SetActive(active)
 	if active then
 		input.setMouseGrab(false)
 		menuactive = true
+		
+		if menus[current_menu] and menus[current_menu].on_entry then
+			menus[current_menu]:on_entry(old_menu)
+		end
 	else
 		input.setMouseGrab(true)
 		menuactive = false
 	end
 end
+
+local function ShowPopup(title, message)
+	current_popup = {title = title, message = message}
+end
+rawset(_G, "ShowPopup", ShowPopup)
 
 --menu page
 local Menu = MenuClass:inherit()
@@ -332,6 +342,8 @@ local function ZeroNumber(str, amount)
 	return string.rep("0", amount - str:len())..str
 end
 
+local cache = {}
+
 function MenuItem_Text:draw(x, y)
 	local width, height = self:getBounds()
 	
@@ -365,8 +377,9 @@ function MenuItem_Text:draw(x, y)
 			
 			local patchname = "STCFN"..ZeroNumber(code, 3)
 			
-			if v.patchExists(patchname) then
-				local patch = v.cachePatch(patchname)
+			if cache[patchname] ~= false and v.patchExists(patchname) then
+				cache[patchname] = $ or v.cachePatch(patchname)
+				local patch = cache[patchname]
 				
 				if draw then
 					v.drawScaled(x + width, y, FU, patch, 0, col)
@@ -375,6 +388,7 @@ function MenuItem_Text:draw(x, y)
 				width = $ + FU * patch.width
 			else
 				width = $ + FU * 4
+				cache[patchname] = false
 			end
 		end
 		
@@ -419,7 +433,7 @@ function MenuItem_Button:activate(increment)
 	end
 
 	if self.link then
-		assert(menus[self.link], ("MenuItem_Button:activate: no menu \"%s\""):format(tostring(self.link)))
+		assert(menus[self.link], ("MenuItem_Button:activate: Could not resolve menu link \"%s\"."):format(tostring(self.link)))
 		
 		local old_menu = current_menu
 		
@@ -476,11 +490,13 @@ end
 
 function MenuItem_Header:draw(x, y)
 	local width, height = self:getBounds()
+	local new_x = x - FU * 11
 	
-	v.drawString(FU * 19 or x, y - FU * 9, self.label, self:getFlags(), "fixed"..self.align_string) --TODO: alignment option
+	v.drawString(new_x, y - FU * 9, self.label, self:getFlags(), "fixed"..self.align_string) --TODO: alignment option
 	
-	v.drawFixedFill(FU * 19, y, FU * 281 + FU, FU * 1 + FU, 26) --shadow
-	v.drawFixedFill(FU * 19, y, FU * 281, FU * 1, 72) --line
+	local width = FU * 320 - new_x * 2
+	v.drawFixedFill(new_x, y, width + FU, FU * 1 + FU, 26) --shadow
+	v.drawFixedFill(new_x, y, width, FU * 1, 72) --line
 end
 
 
@@ -514,6 +530,15 @@ local function Input(key)
 	local name = key.name:lower()
 	local state = GetState()
 	
+	if menuactive and current_popup then
+		--dismiss the popup
+		if name == "escape" then
+			current_popup = nil
+		end
+		
+		return
+	end
+	
 	if name == "escape" then
 		if state == "game" and not menuactive then
 			current_menu = "SP_MainMenu"
@@ -526,10 +551,10 @@ local function Input(key)
 -- 		print(name)
 		
 		local menu = menus[current_menu]
-		assert(menu, ("KeyDown: Invalid menu \"%s\"!"):format(tostring(current_menu))) --r
+		assert(menu, ("Input: Invalid menu \"%s\"!"):format(tostring(current_menu))) --r
 		
 		if menu.parent then
-			assert(menus[menu.parent], ("KeyDown: Invalid menu back link \"%s\""):format(tostring(menu.parent))) --r
+			assert(menus[menu.parent], ("Input: Could not resolve menu back link \"%s\"."):format(tostring(menu.parent))) --r
 			current_menu, menu.parent = menu.parent, nil
 		else
 			SetActive(false)
@@ -551,7 +576,7 @@ local function Input(key)
 	if not menuactive then return end
 	
 	local menu = menus[current_menu]
-	assert(menu, ("KeyDown: Invalid menu \"%s\""):format(tostring(current_menu))) --r
+	assert(menu, ("Input: Invalid menu \"%s\"!"):format(tostring(current_menu))) --r
 	
 	if menu.on_input and menu:on_input(key, name) then
 		return
@@ -665,6 +690,22 @@ local function Drawer(drawer, player)
 	end
 	
 	menu:draw()
+	
+	--draw popup
+	if current_popup then
+		local popup = current_popup
+		v.fadeScreen(0xFF00, 16)
+		
+		local width = FU * 250
+		local height = FU * 100
+		local x, y = FU * 160, FU * 100
+		
+		v.drawFixedFill(x - width / 2, y - height / 2, width, height, 159)
+		
+		--TODO: greatest word wrapping
+		v.drawString(x, y - height / 2 - FU * 4, popup.title, V_ALLOWLOWERCASE, "fixed-center")
+		v.drawString(x, y - height / 2 + FU * 8, popup.message, V_ALLOWLOWERCASE, "fixed-center")
+	end
 end
 
 addHook("MenuThinker", function()
@@ -674,7 +715,11 @@ addHook("MenuThinker", function()
 		local action = next_action
 		
 		next_action = nil
-		action()
+		local active = action()
+		
+		if active ~= nil then
+			SetActive(active)
+		end
 	end
 end)
 

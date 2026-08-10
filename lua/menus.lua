@@ -1,3 +1,4 @@
+--the actual menu data
 local menus = {}
 local v = ...
 
@@ -51,7 +52,11 @@ menus.SingleplayerMenu_StartGame = Menu:new{
 		
 		local scale = FU / 2
 		local no_save = v.cachePatch("SAVENONE")
-		v.drawScaled(FU * 160 - no_save.width * scale / 2 - self.save_scroll, FU * 100 - no_save.height * scale / 2, scale, no_save)
+		
+		local x = FU * 160 - no_save.width * scale / 2 - self.save_scroll
+		local y = FU * 100 - no_save.height * scale / 2
+		v.drawScaled(x, y, scale, no_save)
+		v.drawString(x + FU * 2, y + FU, "Yes File!", V_ALLOWLOWERCASE, "fixed")
 	end,
 	
 	on_input = function(self, key, name)
@@ -63,6 +68,8 @@ menus.SingleplayerMenu_StartGame = Menu:new{
 			self.save_select = $ + scrollby
 			self.save_scroll = $ + scrollby * FU * 100
 		end
+		
+		--M_LoadSelect
 		
 		return true
 	end,
@@ -106,9 +113,12 @@ local function string_split(self, delimiter)
 	return result
 end
 
+--for slow internet (there is a cvar for this, use NUMBER timeout)
+HTTP.setDefaultTimeout(20)
+
 menus.ServerBowser = Menu:new{
 	anchor = {x = "center", y = "top"},
-	width = FU * 320 - FU * 30 * 2,
+	width = FU * 320 - FU * 25 * 2,
 	height = FU * 200 - FU * 20 * 2,
 	
 	on_entry = function(self, old_menu)
@@ -121,7 +131,88 @@ menus.ServerBowser = Menu:new{
 		
 		self:updateItems()
 		
+		if true then
+-- 			ShowPopup("LEGO Island", "Oops! You have to put the CD\nin your computer.")
+			ShowPopup("Server Bowser", "Please note that the Server\nBowser is incomplete.")
+			
+-- 			return
+		end
+		
 		if not HTTP then print("Not contacting the master server.") return end
+		
+		local function connect(button)
+			local server = button.ms_server
+			COM_BufInsertText(nil, "connect "..server.ip.." "..server.port)
+		end
+		
+		local function get_servers(button)
+			self.items = {
+				MenuItem_Header:new{label = "Loading servers..."},
+			}
+			
+			self:updateItems()
+			
+			HTTP.get(("%s/rooms/%d/servers"):format(masterserver.string, button.ms_id), function(response)
+				if response.message then
+					print("error:", response.message)
+					return
+				end
+				
+-- 				print(response.body)
+				
+				local body = HTTP.decodeURL(response.body)
+				local servs = {}
+				local state = {}
+				local lines = string_split(body, "\n")
+				
+				for i, line in ipairs(lines) do
+					if i == 1 then continue end --room number
+					if i == #lines then break end
+					
+					local server = {}
+					local words = string_split(line, " ")
+					
+					for i, word in ipairs(words) do
+						if i == 1 then --server ip address
+							server.ip = word
+						elseif i == 2 then --server port
+							server.port = word
+						elseif i ~= #words then --server name
+							server.name = ($ or "")..word..(i ~= #words - 1 and " " or "")
+						else --server game version
+							server.version = word
+						end
+					end
+-- 					if not state.in_room then
+-- 						state.in_room = true
+-- 						state.room = {}
+-- 						state.line_num = 1
+-- 						state.empty_lines = 0
+-- 					end
+					
+-- 					if state.empty_lines == 2 then
+-- 						state.in_room = false
+-- 						table.insert(servs, state.room)
+-- 					end
+					
+					table.insert(servs, server)
+-- 					state.line_num = $ + 1
+					
+	-- 				print(line)
+				end
+				
+				self.items = {
+					MenuItem_Header:new{label = "Select a server"},
+				}
+				
+				for i, server in ipairs(servs) do
+					table.insert(self.items, MenuItem_Button:new{label = ("%s (%s:%s)"):format(server.name, server.ip, server.port),
+						spacing = FU * 2, action = connect, ms_server = server})
+				end
+				
+				self:updateItems()
+			end)
+		end
 		
 		local function get_rooms(response)
 			if response.message then
@@ -173,7 +264,8 @@ menus.ServerBowser = Menu:new{
 			}
 			
 			for i, v in ipairs(rooms) do
-				table.insert(self.items, MenuItem_Button:new{label = v.id..": "..v.name, link = "ServerBowser", spacing = FU * 2})
+				table.insert(self.items, MenuItem_Button:new{label = v.id..": "..v.name,
+					spacing = FU * 2, ms_id = v.id, action = get_servers})
 			end
 			
 			self:updateItems()
@@ -187,6 +279,13 @@ menus.ServerBowser = Menu:new{
 			end
 			
 			print(response.body)
+			
+			self.items = {
+				MenuItem_Header:new{label = "Loading rooms..."},
+			}
+			
+			self:updateItems()
+			
 			HTTP.get(("%s/rooms"):format(masterserver.string), get_rooms)
 		end
 		
@@ -220,11 +319,12 @@ menus.OptionsMenu = Menu:new{
 		MenuItem_Button:new{label = "Controls per key", cvar = CV_FindVar("controlperkey"), spacing = FU * 2 + FU * 10},
 		
 		MenuItem_Button:new{label = "Video Options...", link = "OptionsMenu_Video", spacing = FU * 2},
-		MenuItem_Button:new{label = "Network Options...", link = "OptionsMenu_Network", spacing = FU * 2},
+		MenuItem_Button:new{label = "Sound Options...", link = "OptionsMenu_Sound", spacing = FU * 2 + FU * 10},
 		
-		MenuItem_Button:new{label = "Bakc", link = "MainMenu"},
-		MenuItem_Button:new{label = "Options", link = "OptionsMenu"},
-		MenuItem_Button:new{label = "Quit  Game"},
+		MenuItem_Button:new{label = "Server Options...", link = "OptionsMenu_Network", spacing = FU * 2},
+		MenuItem_Button:new{label = "Network Options...", link = "OptionsMenu_Network", spacing = FU * 2 + FU * 10},
+		
+		MenuItem_Button:new{label = "Data Options...", link = "OptionsMenu_Network", spacing = FU * 2},
 	},
 }
 
@@ -289,7 +389,33 @@ menus.OptionsMenu_Video = Menu:new{
 		MenuItem_Header:new{label = "Renderer"},
 		MenuItem_Button:new{label = "OpenGL Options...", link = "OptionsMenu_Video", spacing = FU * 2},
 		MenuItem_Button:new{label = "FPS Cap", cvar = CV_FindVar("fpscap"), spacing = FU * 2},
-		--
+	},
+}
+
+menus.OptionsMenu_Sound = Menu:new{
+	anchor = {x = "center", y = "top"},
+	width = FU * 320 - FU * 30 * 2,
+	height = FU * 200 - FU * 20 * 2,
+	
+	items = {
+		MenuItem_Header:new{label = "Game Audio"},
+		MenuItem_Button:new{label = "Sound Effects", cvar = CV_FindVar("sounds"), spacing = FU * 2},
+		MenuItem_Button:new{label = "Sound Volume", cvar = CV_FindVar("soundvolume"), spacing = FU * 2 + FU * 10},
+		
+		MenuItem_Button:new{label = "Digital Music", cvar = CV_FindVar("digimusic"), spacing = FU * 2},
+		MenuItem_Button:new{label = "Digital Music Volume", cvar = CV_FindVar("digmusicvolume"), spacing = FU * 2 + FU * 10},
+		
+		MenuItem_Button:new{label = "MIDI Music", cvar = CV_FindVar("midimusic"), spacing = FU * 2},
+		MenuItem_Button:new{label = "MIDI Music Volume", cvar = CV_FindVar("midimusicvolume"), spacing = FU * 2 + FU * 10},
+		
+		MenuItem_Button:new{label = "Music Preference", cvar = CV_FindVar("musicpref"), spacing = FU * 2},
+		
+		MenuItem_Header:new{label = "Miscellaneous"},
+		MenuItem_Button:new{label = "Closed Captioning", cvar = CV_FindVar("closedcaptioning"), spacing = FU * 2},
+		MenuItem_Button:new{label = "Reset Music Upon Dying", cvar = CV_FindVar("resetmusic"), spacing = FU * 2},
+		MenuItem_Button:new{label = "Default 1-Up sound", cvar = CV_FindVar("1upsound"), spacing = FU * 2 + FU * 10},
+		
+		MenuItem_Button:new{label = "Advanced Settings...", link = "OptionsMenu_Sound_Advanced", spacing = FU * 2},
 	},
 }
 
@@ -300,7 +426,7 @@ menus.OptionsMenu_Network = Menu:new{
 	
 	items = {
 		MenuItem_Header:new{label = "General"},
-		MenuItem_Button:new{label = "Minimum Delay", cvar = CV_FindVar("mindelay"), spacing = FU * 2},
+		MenuItem_Button:new{label = "Sound Effects", cvar = CV_FindVar("mindelay"), spacing = FU * 2},
 		MenuItem_Button:new{label = "Gentleman's Delay", cvar = CV_FindVar("gentlemensdelay"), spacing = FU * 2},
 		MenuItem_Button:new{label = "Connection Timeout", cvar = CV_FindVar("nettimeout"), spacing = FU * 2},
 		MenuItem_Button:new{label = "Network Buffer", cvar = CV_FindVar("netticbuffer"), spacing = FU * 2},
@@ -362,18 +488,24 @@ menus.SP_MainMenu = Menu:new{
 	width = FU * 320 - FU * 40 * 2,
 	height = FU * 200 - FU * 20 * 2,
 	
+	on_entry = function(self, old_menu)
+		--reset to Continue on pause and set the cursor instantly
+		self.selection = 5
+		self:updateItems()
+	end,
+	
 	items = {
 		MenuItem_Box:new{width = FU * 262, height = FU * 54, spacing = FU * 13, x_offset = FU * -8,
-		level_title_label = MenuItem_Text:new{colored = true},
-		on_draw = function(self, x, y, width, height)
-			local info = mapheaderinfo[gamemap]
-			
-			if not info then return end
-			
--- 			v.drawString(x, y, info.lvlttl, 0, "fixed")
-			self.level_title_label.label = info.lvlttl.." "..(info.actnum or "")
-			self.level_title_label:draw(x + FU * 8, y + FU * 8 - FU)
-		end},
+			level_title_label = MenuItem_Text:new{colored = true},
+			on_draw = function(self, x, y, width, height)
+				local info = mapheaderinfo[gamemap]
+				
+				if not info then return end
+				
+	-- 			v.drawString(x, y, info.lvlttl, 0, "fixed")
+				self.level_title_label.label = info.lvlttl.." "..(info.actnum or "")
+				self.level_title_label:draw(x + FU * 8, y + FU * 8 - FU)
+			end},
 		
 		MenuItem_Button:new{label = "Pandora's Box..."},
 		MenuItem_Button:new{label = "Emblem Hints..."},
@@ -381,13 +513,18 @@ menus.SP_MainMenu = Menu:new{
 -- 		MenuItem_Button:new{label = "1  Player", align = "center", link = "SingleplayerMenu"},
 		
 		MenuItem_Button:new{label = "Continue", link = ""},
-		MenuItem_Button:new{label = "Retry", link = ""},
+		MenuItem_Button:new{label = "Retry", action = function(self)
+			return function()
+				COM_BufInsertText(nil, "retry")
+				return false
+			end
+		end},
 		MenuItem_Button:new{label = "Options", link = "OptionsMenu", spacing = FU * 8},
 		
 		MenuItem_Button:new{label = "Return to Title", action = function(self)
 			return function()
 				COM_BufInsertText(nil, "exitgame")
-				menuactive = false
+				return false
 			end
 		end},
 		MenuItem_Button:new{label = "Quit Game", action = function(self)
