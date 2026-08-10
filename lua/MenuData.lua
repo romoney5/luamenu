@@ -2,6 +2,12 @@
 local menus, v = ...
 loadfile("MenuData_Server.lua")(menus, v)
 
+local function new_menu(name, data)
+	menus[name] = data
+	
+	return name
+end
+
 --title screen menu
 
 menus.MainMenu = Menu:new{
@@ -181,18 +187,18 @@ menus.OptionsMenu = Menu:new{
 	title = "OPTIONS",
 	
 	items = {
-		MenuItem_Button:new{label = "Player 1 Controls...", link = "OptionsMenu_P1Controls", spacing = FU * 2},
-		MenuItem_Button:new{label = "Player 2 Controls...", link = "OptionsMenu_P2Controls", spacing = FU * 2},
-		MenuItem_Button:new{label = "Controls per key", cvar = CV_FindVar("controlperkey"), spacing = FU * 2 + FU * 10},
+		MenuItem_Button:new{label = "Player 1 Controls...", desc = "Change controls for Player 1", link = "OptionsMenu_P1Controls", spacing = FU * 2},
+		MenuItem_Button:new{label = "Player 2 Controls...", desc = "Change controls for Player 2", link = "OptionsMenu_P2Controls", spacing = FU * 2}, --no p2 controls right now
+		MenuItem_Button:new{label = "Controls per key", desc = "Amount of controls that can be bound to the same key", cvar = CV_FindVar("controlperkey"), spacing = FU * 2 + FU * 10},
 		
-		MenuItem_Button:new{label = "Video Options...", link = "OptionsMenu_Video", spacing = FU * 2},
-		MenuItem_Button:new{label = "Sound Options...", link = "OptionsMenu_Sound", spacing = FU * 2 + FU * 10},
+		MenuItem_Button:new{label = "Video Options...", desc = "Change video and display settings", link = "OptionsMenu_Video", spacing = FU * 2},
+		MenuItem_Button:new{label = "Sound Options...", desc = "Change audio settings", link = "OptionsMenu_Sound", spacing = FU * 2 + FU * 10},
 		
-		MenuItem_Button:new{label = "Server Options...", link = "OptionsMenu_Server", spacing = FU * 2},
-		MenuItem_Button:new{label = "Network Options...", link = "OptionsMenu_Network", spacing = FU * 2 + FU * 10},
+		MenuItem_Button:new{label = "Server Options...", desc = "Change server hosting settings", link = "OptionsMenu_Server", spacing = FU * 2},
+		MenuItem_Button:new{label = "Network Options...", desc = "Change network settings", link = "OptionsMenu_Network", spacing = FU * 2 + FU * 10},
 		
-		MenuItem_Button:new{label = "Data Options...", link = "OptionsMenu_Data", spacing = FU * 2},
-		MenuItem_Button:new{label = "Menu Options...", link = "OptionsMenu_Luamenu", spacing = FU * 2},
+		MenuItem_Button:new{label = "Data Options...", desc = "Manage data, screenshots, etc.", link = "OptionsMenu_Data", spacing = FU * 2},
+		MenuItem_Button:new{label = "Menu Options...", desc = "Luamenu-specific settings", link = "OptionsMenu_Luamenu", spacing = FU * 2},
 	},
 }
 
@@ -204,10 +210,7 @@ menus.OptionsMenu_Luamenu = Menu:new{
 	
 	items = {
 		MenuItem_Header:new{label = "Visual"},
-		MenuItem_Button:new{label = "Background Decorations", cvar = CV_FindVar("luamenu_bgdecos"), spacing = FU * 2},
-		
-		MenuItem_Header:new{label = "Color Profile"},
-		MenuItem_Button:new{label = "Brightness", cvar = CV_FindVar("gamma"), spacing = FU * 2},
+		MenuItem_Button:new{label = "Background Decorations", desc = "Show visual decorations in the background", cvar = CV_FindVar("luamenu_bgdecos"), spacing = FU * 2},
 	},
 }
 
@@ -215,12 +218,56 @@ menus.OptionsMenu_P1Controls = Menu:new{
 	anchor = {x = "center", y = "top"},
 	width = FU * 320 - FU * 50 * 2,
 	height = FU * 200 - FU * 20 * 2,
-	title = "AY BOY I JUST GOT THE NEW iPHONE",--\nIT EVEN GOT AN APP TO DESTROY ALL OPPS",
+	title = "CONTROL SETUP",--"AY BOY I JUST GOT THE NEW iPHONE",--\nIT EVEN GOT AN APP TO DESTROY ALL OPPS",
 	
 	items = {
-		MenuItem_Button:new{label = "Player 1 Controls...", link = "a", spacing = FU * 2},
-		MenuItem_Button:new{label = "Player 2 Controls...", link = "a", spacing = FU * 2},
-		MenuItem_Button:new{label = "Controls per key", cvar = CV_FindVar("controlperkey"), spacing = FU * 2 + FU * 10},
+		MenuItem_Button:new{label = "Control Configuration...", desc = "Change keyboard controls", link = "a", spacing = FU * 2},
+		MenuItem_Button:new{label = "Mouse Options...", desc = "Change mouse settings", link = new_menu("OptionsMenu_P1Controls_Mouse", Menu:new{
+			anchor = {x = "center", y = "top"}, width = FU * 320 - FU * 30 * 2, height = FU * 200 - FU * 20 * 2,
+			title = "CONTROL SETUP",
+			
+			items = {
+				MenuItem_Button:new{label = "Use Mouse", desc = "Enable mouse movement", cvar = CV_FindVar("use_mouse"), spacing = FU * 2 + FU * 10},
+				
+				MenuItem_Button:new{label = "First-Person MouseLook", desc = "Enable looking up/down in first person", cvar = CV_FindVar("alwaysmlook"), spacing = FU * 2},
+				MenuItem_Button:new{label = "Third-Person MouseLook", desc = "Enable looking up/down in third person", cvar = CV_FindVar("chasemlook"), spacing = FU * 2},
+				MenuItem_Button:new{label = "Mouse Move", desc = "Use the mouse to move the character", cvar = CV_FindVar("mousemove"), spacing = FU * 2},
+				MenuItem_Button:new{label = "Invert Y Axis", desc = "Invert vertical mouse movement", cvar = CV_FindVar("invertmouse"), spacing = FU * 2},
+				MenuItem_Button:new{label = "Mouse X Sensitivity", desc = "Change horizontal mouse sensitivity", cvar = CV_FindVar("mousesens"), spacing = FU * 2},
+				MenuItem_Button:new{label = "Mouse Y Sensitivity", desc = "Change vertical mouse sensitivity", cvar = CV_FindVar("mouseysens"), spacing = FU * 2 + FU * 10},
+			},
+		}), spacing = FU * 2},
+		MenuItem_Button:new{label = "Gamepad Options...", desc = "Change controller settings", link = "a", spacing = FU * 2 + FU * 10},
+		
+		MenuItem_Button:new{label = "Camera Options...", desc = "Change camera settings", link = new_menu("OptionsMenu_P1Controls_Camera", Menu:new{
+			anchor = {x = "center", y = "top"}, width = FU * 320 - FU * 30 * 2, height = FU * 200 - FU * 20 * 2,
+			title = "CONTROL SETUP",
+			
+			items = {
+				MenuItem_Header:new{label = "General Toggles"},
+				MenuItem_Button:new{label = "Third-person Camera", desc = "Enable third-person camera view", cvar = CV_FindVar("chasecam"), spacing = FU * 2},
+				MenuItem_Button:new{label = "Flip Camera with Gravity", desc = "Keep the camera straight in reverse gravity", cvar = CV_FindVar("flipcam"), spacing = FU * 2},
+				MenuItem_Button:new{label = "Orbital Looking", desc = "Move the camera in an arc when looking vertically", cvar = CV_FindVar("cam_orbit"), spacing = FU * 2},
+				MenuItem_Button:new{label = "Downhill Slope Adjustment", desc = "Raise the camera on downhill slopes", cvar = CV_FindVar("cam_adjust"), spacing = FU * 2},
+				
+				MenuItem_Header:new{label = "Camera Positioning"},
+				MenuItem_Button:new{label = "Camera Distance", desc = "Change the distance of third-person camera", cvar = CV_FindVar("cam_dist"), spacing = FU * 2},
+				MenuItem_Button:new{label = "Camera Height", desc = "Change the height of third-person camera", cvar = CV_FindVar("cam_height"), spacing = FU * 2},
+				MenuItem_Button:new{label = "Camera Spacial Speed", desc = "Change the following speed of third-person camera", cvar = CV_FindVar("cam_speed"), spacing = FU * 2},
+				MenuItem_Button:new{label = "Rotation Speed", desc = "Change the speed of left/right arrow keys", cvar = CV_FindVar("cam_turnmultiplier"), spacing = FU * 2},
+				
+				MenuItem_Header:new{label = "Display Options"},
+				MenuItem_Button:new{label = "Crosshair", desc = "Show a crosshair at the center in first-person", cvar = CV_FindVar("crosshair"), spacing = FU * 2},
+				MenuItem_Button:new{label = "Inverted Crosshair", desc = "Invert the crosshair's color against the background", cvar = CV_FindVar("crosshair_invert"), spacing = FU * 2},
+				
+				MenuItem_Header:new{label = "Miscellaneous"},
+				MenuItem_Button:new{label = "Exact Camera", desc = "Enable precise third-person camera movement", cvar = CV_FindVar("cam_exact"), spacing = FU * 2}, --romoney5
+				MenuItem_Button:new{label = "Clipping Style", desc = "Change third-person camera clipping behavior", cvar = CV_FindVar("cam_clipping"), spacing = FU * 2}, --romoney5
+			},
+		}), spacing = FU * 2 + FU * 10},
+		
+		MenuItem_Button:new{label = "Automatic braking", desc = "Skid to a stop automatically", cvar = CV_FindVar("autobrake"), spacing = FU * 2},
+		MenuItem_Button:new{label = "Play Style...", desc = "Change the game's control style", link = "a", spacing = FU * 2},
 	},
 }
 
@@ -232,27 +279,27 @@ menus.OptionsMenu_Video = Menu:new{
 	
 	items = {
 		MenuItem_Header:new{label = "Screen"},
-		MenuItem_Button:new{label = "Set Resolution...", link = "OptionsMenu_Video_Resolution", spacing = FU * 2},
-		MenuItem_Button:new{label = "Fullscreen (F11)", cvar = CV_FindVar("fullscreen"), spacing = FU * 2},
-		MenuItem_Button:new{label = "Vertical Sync", cvar = CV_FindVar("vid_wait"), spacing = FU * 2},
-		MenuItem_Button:new{label = "Renderer (F10)", cvar = CV_FindVar("renderer"), spacing = FU * 2},
+		MenuItem_Button:new{label = "Set Resolution...", desc = "Change game resolution", link = "OptionsMenu_Video_Resolution", spacing = FU * 2},
+		MenuItem_Button:new{label = "Fullscreen (F11)", desc = "Enable fullscreen mode", cvar = CV_FindVar("fullscreen"), spacing = FU * 2},
+		MenuItem_Button:new{label = "Vertical Sync", desc = "Eliminate screen tearing at the cost of higher latency", cvar = CV_FindVar("vid_wait"), spacing = FU * 2},
+		MenuItem_Button:new{label = "Renderer (F10)", desc = "Switch the game's renderer", cvar = CV_FindVar("renderer"), spacing = FU * 2},
 		
 		MenuItem_Header:new{label = "Color Profile"},
 		MenuItem_Button:new{label = "Brightness", cvar = CV_FindVar("gamma"), spacing = FU * 2},
 		MenuItem_Button:new{label = "Saturation", cvar = CV_FindVar("saturation"), spacing = FU * 2},
-		MenuItem_Button:new{label = "Advanced Settings...", link = "OptionsMenu_Video_Color", spacing = FU * 2},
+		MenuItem_Button:new{label = "Advanced Settings...", desc = "Advanced color settings", link = "OptionsMenu_Video_Color", spacing = FU * 2},
 		
 		MenuItem_Header:new{label = "Heads-Up Display"},
 		MenuItem_Button:new{label = "Show HUD", cvar = CV_FindVar("showhud"), spacing = FU * 2},
 		MenuItem_Button:new{label = "HUD Transparency", cvar = CV_FindVar("translucenthud"), spacing = FU * 2},
-		MenuItem_Button:new{label = "Score/Time/Rings", cvar = CV_FindVar("timerres"), spacing = FU * 2},
-		MenuItem_Button:new{label = "Show Powerups", cvar = CV_FindVar("powerupdisplay"), spacing = FU * 2},
-		MenuItem_Button:new{label = "Local Ping Display", cvar = CV_FindVar("showping"), spacing = FU * 2},
-		MenuItem_Button:new{label = "Show Player Names", cvar = CV_FindVar("seenames"), spacing = FU * 2},
-		MenuItem_Button:new{label = "Uppercase Menus", cvar = CV_FindVar("menucaps"), spacing = FU * 2}, --srb2-edit
-		MenuItem_Button:new{label = "Menu Highlight Color", cvar = CV_FindVar("menucolor"), spacing = FU * 2}, --srb2-edit, romoney5
-		MenuItem_Button:new{label = "Menu Background Color", cvar = CV_FindVar("menubgcolor"), spacing = FU * 2}, --gks edit
-		MenuItem_Button:new{label = "Screen Fades", cvar = CV_FindVar("wipes"), spacing = FU * 2}, --romoney5
+		MenuItem_Button:new{label = "Score/Time/Rings", desc = "Change the timer's style", cvar = CV_FindVar("timerres"), spacing = FU * 2},
+		MenuItem_Button:new{label = "Show Powerups", desc = "Show active powerups at the bottom-right corner", cvar = CV_FindVar("powerupdisplay"), spacing = FU * 2},
+		MenuItem_Button:new{label = "Local Ping Display", desc = "Show ping at the bottom-right corner", cvar = CV_FindVar("showping"), spacing = FU * 2},
+		MenuItem_Button:new{label = "Show Player Names", desc = "Show player names when looking at them", cvar = CV_FindVar("seenames"), spacing = FU * 2},
+		MenuItem_Button:new{label = "Uppercase Menus", desc = "Force uppercase text in menus", cvar = CV_FindVar("menucaps"), spacing = FU * 2}, --srb2-edit
+		MenuItem_Button:new{label = "Menu Highlight Color", desc = "Change the color of highlighted text", cvar = CV_FindVar("menucolor"), spacing = FU * 2}, --srb2-edit, romoney5
+		MenuItem_Button:new{label = "Menu Background Color", desc = "Change the color of backgrounds", cvar = CV_FindVar("menubgcolor"), spacing = FU * 2}, --gks edit
+		MenuItem_Button:new{label = "Screen Fades", desc = "Enable screen transitions", cvar = CV_FindVar("wipes"), spacing = FU * 2}, --romoney5
 		
 		MenuItem_Header:new{label = "Console"},
 		MenuItem_Button:new{label = "Background Color", cvar = CV_FindVar("con_backcolor"), spacing = FU * 2},
@@ -263,26 +310,26 @@ menus.OptionsMenu_Video = Menu:new{
 		MenuItem_Button:new{label = "Chat Box Width", cvar = CV_FindVar("chatwidth"), spacing = FU * 2},
 		MenuItem_Button:new{label = "Chat Box Height", cvar = CV_FindVar("chatheight"), spacing = FU * 2},
 		MenuItem_Button:new{label = "Message Fadeout Time", cvar = CV_FindVar("chattime"), spacing = FU * 2},
-		MenuItem_Button:new{label = "Chat Notifications", cvar = CV_FindVar("chatnotifications"), spacing = FU * 2},
-		MenuItem_Button:new{label = "Spam Protection", cvar = CV_FindVar("chatspamprotection"), spacing = FU * 2},
+		MenuItem_Button:new{label = "Chat Notifications", desc = "Enable chat sounds", cvar = CV_FindVar("chatnotifications"), spacing = FU * 2},
+		MenuItem_Button:new{label = "Spam Protection", desc = "Block spammed chat messages", cvar = CV_FindVar("chatspamprotection"), spacing = FU * 2},
 		MenuItem_Button:new{label = "Chat background tint", cvar = CV_FindVar("chatbacktint"), spacing = FU * 2},
 		
 		MenuItem_Header:new{label = "Level"},
-		MenuItem_Button:new{label = "Draw Distance", cvar = CV_FindVar("drawdist"), spacing = FU * 2},
+		MenuItem_Button:new{label = "Draw Distance", desc = "Change render distance of objects", cvar = CV_FindVar("drawdist"), spacing = FU * 2},
 		MenuItem_Button:new{label = "Weather Draw Dist.", cvar = CV_FindVar("drawdist_precip"), spacing = FU * 2},
 		MenuItem_Button:new{label = "NiGHTS Hoop Draw Dist.", cvar = CV_FindVar("drawdist_nights"), spacing = FU * 2},
-		MenuItem_Button:new{label = "Pitch/Roll Object Rotation", cvar = CV_FindVar("pitchroll-tation"), spacing = FU * 2}, --srb2-edit, romoney5
-		MenuItem_Button:new{label = "Ring Racers Screenshakes", cvar = CV_FindVar("rr_quakes"), spacing = FU * 2}, --srb2-edit, romoney5
-		MenuItem_Button:new{label = "Screenshake Effects", cvar = CV_FindVar("earthquake"), spacing = FU * 2}, --srb2-edit, romoney5
-		MenuItem_Button:new{label = "Fullbright", cvar = CV_FindVar("fullbrite"), spacing = FU * 2},
-		MenuItem_Button:new{label = "Screen Flashes", cvar = CV_FindVar("flashes"), spacing = FU * 2},
+		MenuItem_Button:new{label = "Pitch/Roll Object Rotation", desc = "Rotate objects on slopes", cvar = CV_FindVar("pitchroll-tation"), spacing = FU * 2}, --srb2-edit, romoney5
+		MenuItem_Button:new{label = "Ring Racers Screenshakes", desc = "Ring Racers-styled screen shakes", cvar = CV_FindVar("rr_quakes"), spacing = FU * 2}, --srb2-edit, romoney5
+		MenuItem_Button:new{label = "Screenshake Effects", desc = "Enable screen shakes", cvar = CV_FindVar("earthquake"), spacing = FU * 2}, --srb2-edit, romoney5
+		MenuItem_Button:new{label = "Minimum Brightness", desc = "Change minimum sector brightness", cvar = CV_FindVar("fullbrite"), spacing = FU * 2},
+		MenuItem_Button:new{label = "Screen Flashes", desc = "Enable screen flashes", cvar = CV_FindVar("flashes"), spacing = FU * 2},
 		
 		MenuItem_Header:new{label = "Diagnostic"},
-		MenuItem_Button:new{label = "Show FPS", cvar = CV_FindVar("showfps"), spacing = FU * 2},
-		MenuItem_Button:new{label = "Show TPS", cvar = CV_FindVar("showtps"), spacing = FU * 2}, --srb2-edit
-		MenuItem_Button:new{label = "Clear Before Redraw", cvar = CV_FindVar("homremoval"), spacing = FU * 2},
+		MenuItem_Button:new{label = "Show FPS", desc = "Show render frames per second", cvar = CV_FindVar("showfps"), spacing = FU * 2},
+		MenuItem_Button:new{label = "Show TPS", desc = "Show game tics per second", cvar = CV_FindVar("showtps"), spacing = FU * 2}, --srb2-edit
+		MenuItem_Button:new{label = "Clear Before Redraw", desc = "Alleviate out-of-bounds visual glitches in Software", cvar = CV_FindVar("homremoval"), spacing = FU * 2},
 		MenuItem_Button:new{label = "Show \"FOCUS LOST\"", cvar = CV_FindVar("showfocuslost"), spacing = FU * 2},
-		MenuItem_Button:new{label = "Show Movie Info", cvar = CV_FindVar("moviemodeinfo"), spacing = FU * 2},
+		MenuItem_Button:new{label = "Show Movie Info", desc = "Show info when recording movies", cvar = CV_FindVar("moviemodeinfo"), spacing = FU * 2},
 		
 		MenuItem_Header:new{label = "Renderer"},
 		MenuItem_Button:new{label = "OpenGL Options...", link = "OptionsMenu_Video_OpenGL", spacing = FU * 2},

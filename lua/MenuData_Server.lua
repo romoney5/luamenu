@@ -326,6 +326,7 @@ menus.ServerBowser = Menu:new{
 	anchor = {x = "center", y = "top"},
 	width = FU * 320 - FU * 25 * 2,
 	height = FU * 200 - FU * 20 * 2,
+	title = "MULTIPLAYER",
 	
 	on_draw = function(self, v)
 		if self.loading then
@@ -469,11 +470,23 @@ menus.ServerBowser = Menu:new{
 			
 			self.items = {
 				MenuItem_Header:new{label = "Select a room"},
+				
+				MenuItem_Box:new{width = FU * 280, height = FU * 54, spacing = FU * 4,
+					align = "center",
+					level_title_label = MenuItem_Text:new{scale = FU / 2},
+					on_draw = function(box, x, y, width, height)
+						local info = self.items[self.selection]
+						
+						if not info then return end
+						
+						box.level_title_label.label = info.ms_desc
+						box.level_title_label:draw(x + FU * 8, y + FU * 8 - FU)
+					end},
 			}
 			
 			for i, v in ipairs(rooms) do
-				table.insert(self.items, MenuItem_Button:new{label = v.id..": "..v.name,
-					spacing = FU * 2, ms_id = v.id, action = get_servers})
+				table.insert(self.items, MenuItem_Button:new{label = v.name,
+					spacing = FU * 2, ms_id = v.id, ms_desc = v.desc, action = get_servers, desc = (v.name == "All" and "The \"All\" room may not show all servers." or "Room ID: "..v.id)})
 			end
 			
 			self:updateItems()

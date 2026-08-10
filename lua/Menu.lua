@@ -47,6 +47,10 @@ local function ShowPopup(title, message)
 end
 rawset(_G, "ShowPopup", ShowPopup)
 
+local menu_time = 0
+local menu_enter_anim = FU
+local menu_exit_anim = FU
+
 local function Menu_GotoLink(link)
 	if not menus[link] then
 		ShowPopup("Menu_GotoLink", ("Could not resolve menu link \"%s\"."):format(tostring(link)))
@@ -66,6 +70,9 @@ local function Menu_GotoLink(link)
 	if menus[current_menu].on_entry then
 		menus[current_menu]:on_entry(old_menu)
 	end
+	
+	menu_enter_anim = 0
+	menu_exit_anim = FU
 end
 rawset(_G, "Menu_GotoLink", Menu_GotoLink)
 
@@ -178,11 +185,16 @@ function Menu:draw()
 	local x, y = self:getPosition()
 	y = $ - self.scroll
 	
+	x = $ + ease.outcubic(menu_enter_anim, FU * 15, 0)
+	x = $ - ease.outcubic(menu_exit_anim, FU * 15, 0)
+	
+	--draw header
 	if self.title_label then
 		self.title_label.label = self.title
 		self.title_label:draw(x, y - FU * 35)
 	end
 	
+	--draw all items
 	for i, item in ipairs(self.items) do
 		local py = self:getYPositionAt(i)
 		local align, align_string, factor = item:getAlignment()
@@ -196,6 +208,18 @@ function Menu:draw()
 			self.cursor_position.x = ease.linear(FU / 3, $, x + align + FixedMul(width, factor) - FU * (24 or 32)) --tied to fps
 			self.cursor_position.y = ease.linear(FU / 3, $, y + py)
 			v.drawScaled(self.cursor_position.x, self.cursor_position.y, FU, v.cachePatch("M_CURSOR"), 0)
+		end
+	end
+	
+	--draw classic tooltip
+	if self.items[self.selection] then
+		local desc = self.items[self.selection].desc
+		
+		if desc then
+			local padding = FU * 4
+			local width = FU * v.stringWidth(desc, V_ALLOWLOWERCASE, "thin") + padding * 2
+			v.drawFixedFill(FU * 320 / 2 - width / 2, FU * 200 - FU * 10 - padding, width, FU * 10 + padding, cv_menubgcolor.value|V_SNAPTOBOTTOM|V_TRANSLUCENT)
+			v.drawString(FU * 320 / 2, FU * 200 - FU * 10, desc, V_ALLOWLOWERCASE|V_SNAPTOBOTTOM, "thin-fixed-center")
 		end
 	end
 	
@@ -283,6 +307,8 @@ function MenuItem:new(a)
 	a.align = $ or "left"
 	a.pre_spacing = $ or 0
 	a.spacing = $ or 0
+	
+	a.desc = $ or nil
 	
 -- 	a.visible = $
 -- 	if a.visible == nil then a.visible = true end
@@ -542,6 +568,26 @@ function MenuItem_Header:canSelect()
 	return false
 end
 
+--values from glide's fork
+local VMAPToPaletteIndex = {
+	[0] = 0 + 1,
+	[V_REDMAP] = 34,
+	[V_ORANGEMAP] = 52,
+	[V_YELLOWMAP] = 73,
+	[V_PERIDOTMAP] = 188 + 1,
+	[V_GREENMAP] = 98,
+	[V_AQUAMAP] = 122,
+	[V_SKYMAP] = 131,
+	[V_AZUREMAP] = 146,
+	[V_BLUEMAP] = 149,
+	[V_PURPLEMAP] = 162,
+	[V_MAGENTAMAP] = 178,
+	[V_ROSYMAP] = 201,
+	[V_BROWNMAP] = 226,
+	[V_GRAYMAP] = 12,
+	[V_INVERTMAP] = 29,
+}
+
 function MenuItem_Header:draw(x, y)
 	local width, height = self:getBounds()
 	local new_x = x - FU * 11
@@ -549,8 +595,8 @@ function MenuItem_Header:draw(x, y)
 	v.drawString(new_x, y - FU * 9, self.label, self:getFlags(), "fixed"..self.align_string) --TODO: alignment option
 	
 	local width = FU * 320 - new_x * 2
-	v.drawFixedFill(new_x, y, width + FU, FU * 1 + FU, 26) --shadow
-	v.drawFixedFill(new_x, y, width, FU * 1, 72) --line
+	v.drawFixedFill(new_x, y, width + FU, FU * 1 + FU, cv_menucolor.value ~= V_INVERTMAP and 26 or 0) --shadow
+	v.drawFixedFill(new_x, y, width, FU * 1, VMAPToPaletteIndex[cv_menucolor.value] - 1) --line
 end
 
 --rounded box
@@ -699,6 +745,9 @@ local function Input(key)
 			if menus[current_menu] and menus[current_menu].on_entry then
 				menus[current_menu]:on_entry(old_menu)
 			end
+			
+			menu_enter_anim = FU
+			menu_exit_anim = 0
 		else
 			SetActive(false)
 		end
@@ -754,8 +803,6 @@ end
 local mouse_pressed = false
 loadfile("MenuData.lua")(menus, v)
 
-local menu_time = 0
-
 local function Drawer(drawer, player)
 -- 	local serverlistcount = #serverlist
 -- 	print(serverlistcount, servernode)
@@ -771,6 +818,9 @@ local function Drawer(drawer, player)
 	v.fadeScreen(0xFF00, 16)
 	
 	menu_time = $ + v.deltaTics()
+	
+	menu_enter_anim = min($ + v.deltaTics() / 10, FU)
+	menu_exit_anim = min($ + v.deltaTics() / 10, FU)
 	
 	local menu = menus[current_menu]
 	assert(menu, ("Drawer: Invalid menu \"%s\"!"):format(tostring(current_menu)))
