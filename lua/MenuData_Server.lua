@@ -62,10 +62,37 @@ local REFUSE_BANNED = 3
 local SRB2APPLICATION = "SRB2" --TODO: epose
 local PACKETVERSION = 5 --TODO: epose
 
+local SV_DEDICATED = 0x40 --dedotated server
+local SV_LOTSOFADDONS = 0x20
+
 local FORCECLOSE = 0x8000
+
+local FILENEEDED_WAD = 0
+local FILENEEDED_SAVEGAME = 1
+local FILENEEDED_LUAFILE = 2
+
+local FS_NOTCHECKED = 0
+local FS_NOTFOUND = 1
+local FS_FOUND = 2
+local FS_REQUESTED = 3
+local FS_DOWNLOADING = 4
+local FS_OPEN = 5 --Is opened and used in w_wad
+local FS_MD5SUMBAD = 6
+local FS_FALLBACK = 7
+
+local FDOWNLOAD_FAIL_NONE = 0
+local FDOWNLOAD_FAIL_NOTFOUND = 1
+local FDOWNLOAD_FAIL_MD5SUMBAD = 2
+local FDOWNLOAD_FAIL_OTHER = 3
 
 local asktime = 0
 local joinnode = 0
+
+--fileneeded
+local fileneeded
+local fileneedednum = 0
+
+local cl_lastcheckedfilecount = 0
 
 --a lot of these functions are recreateable in lua already with what we have
 local function SL_SearchServer(node)
@@ -109,6 +136,46 @@ local function InvalidServerReason(info)
 		return "Server is currently full."
 	elseif info.refusereason then
 		return "No."
+	end
+end
+
+local function D_ParseFileneeded(fileneedednum_parm, fileneededstr, firstfile)
+	fileneedednum = firstfile + fileneedednum_parm
+	fileneeded = {}
+	
+	local pos = 1
+	
+	for i = firstfile + 1, fileneedednum - 1 + 1 do
+		fileneeded[i] = {}
+		
+		fileneeded[i].type = FILENEEDED_WAD
+		fileneeded[i].status = FS_NOTCHECKED
+		fileneeded[i].justdownloaded = false
+		local filestatus = fileneededstr:byte(pos, pos) pos = $ + 1
+		fileneeded[i].folder = fileneededstr:byte(pos, pos) pos = $ + 1
+		fileneeded[i].willsend = filestatus >> 4
+		fileneeded[i].totalsize = fileneededstr:byte(pos, pos + 3) pos = $ + 4
+		fileneeded[i].file = nil
+		fileneeded[i].failed = FDOWNLOAD_FAIL_NONE
+		
+		fileneeded[i].filename = ""
+		
+		local total_length = 0
+		while total_length < 512 do
+			if fileneededstr:byte(pos, pos) == 0 then
+				break
+			end
+			
+			fileneeded[i].filename = $..fileneededstr:sub(pos, pos)
+			pos = $ + 1
+			total_length = $ + 1
+		end
+		pos = $ + 1
+		print(i.." "..fileneeded[i].filename)
+		
+		fileneeded[i].md5sum = fileneededstr:sub(pos, pos + 15) pos = $ + 16
+		
+		--TODO: addontype stuff added in srb2-edit
 	end
 end
 
@@ -172,10 +239,19 @@ local function CL_ServerConnectionSearchTicker()
 			ChangeServMusic(servmus_1, true,false);
 			]]
 			
+			D_ParseFileneeded(info.fileneedednum, info.fileneeded, 0) --NOT native
+			
+			if info.flags & SV_LOTSOFADDONS then --server has like 20 addons, get the full list
+				cl_mode = CL_ASKFULLFILELIST
+				cl_lastcheckedfilecount = 0
+				
+				return true
+			end
+			
 -- 			print("CL_ServerConnectionSearchTicker: reached CL_VIEWSERVER")
-			print(info.servername)
+-- 			print(info.servername)
 			cl_mode = CL_VIEWSERVER
-			D_ParseFileneeded(info.fileneedednum, info.fileneeded, 0) --native
+-- 			print("files needed: "..info.fileneedednum)
 		else --server?!?!?!
 			cl_mode = CL_ASKJOIN
 			--*asksent = 0
@@ -187,6 +263,50 @@ local function CL_ServerConnectionSearchTicker()
 		SendAskInfo(servernode) --native
 		asktime = TICRATE
 	end
+end
+
+local function CL_FinishedFileList()
+	cl_mode = CL_SEARCHING
+	
+	--custom build
+	--only look inside DOWNLOAD for now (findfile)
+	for i, v in ipairs(fileneeded) do
+		print("checking file "..v.filename.."..")
+-- 		local file = io.lua_open("DOWNLOAD/CL_ModernSonic-v6.pk3", "rb")
+	-- 	local file = io.lua_open("addons/replacexit.lua", "rb")
+		local file = io.lua_open("DOWNLOAD/"..v.filename, "rb")
+		
+		if not file then
+			print("file does not exist")
+			
+			continue
+		end
+-- 		print(file)
+	-- 	print(file:read("*a"):len())
+		--c get file from lua io.file
+		local md5 = GetFileMD5(file)
+		print(md5:len(), v.md5sum:len(), md5 == v.md5sum)
+		file:close()
+		
+-- 		for i = 1, 16 do
+-- 			local byte = md5:byte(i, i)
+-- 	-- 		byte = ($ + 128) % 128
+-- 			print("md5 "..byte)
+-- 			print("md5sum "..fileneeded[0].md5sum:byte(i, i))
+-- 		end
+	end
+	
+-- 	local fileneeded = serverlist[joinnode].info.fileneeded
+-- 	local str = ""
+	
+-- 	for i = 1, 64 do
+-- 		local char = fileneeded[i]
+-- 		if char < 32 or char > 126 then char = 63 end
+-- 		--print(string.char(fileneeded[i]))
+-- 		str = $..string.char(char)
+-- 	end
+	
+-- 	print(str)
 end
 
 local viewip = ""
@@ -290,11 +410,29 @@ menus.Sonikm = Menu:new{
 		if v.isNewTic() then
 			if cl_mode == CL_SEARCHING then
 				CL_ServerConnectionSearchTicker()
+			elseif cl_mode == CL_ASKFULLFILELIST then
+				if cl_lastcheckedfilecount == UINT16_MAX then
+					cl_mode = CL_VIEWSERVER
+					--TODO: addon types
+				elseif fileneedednum ~= cl_lastcheckedfilecount then
+					asktime = $ - 1
+					if asktime <= 0 then
+						print("sending askfilelist, current files "..fileneedednum)
+						asktime = TICRATE
+						if AskFileList(fileneedednum) then --native
+							cl_lastcheckedfilecount = fileneedednum
+						end
+					end
+				end
+			elseif cl_mode == CL_CHECKFILES then
+				CL_FinishedFileList()
 			end
 			
 -- 			Deez()
 		end
 	end,
+	
+	showing_addons = false,
 	
 -- 	on_entry = function(self, old_menu)
 -- 		self.loading = true
@@ -305,6 +443,7 @@ menus.Sonikm = Menu:new{
 		if servernode > 0 and servernode < MAXNETNODES then
 -- 			netnodes[(UINT8)servernode].ingame = false;
 			Net_CloseConnection(servernode)
+			print("Network game synchronization aborted.")
 		end
 	end,
 	
@@ -326,9 +465,23 @@ menus.Sonikm = Menu:new{
 					self.subtitle_label:draw(x + height + FU * 4, y + FU * 4 + FU * 10)
 					
 					DrawSpinner(x + height / 2, y + height / 2)
+				elseif cl_mode == CL_ASKFULLFILELIST then
+					self.title_label.label = "Fetching full addon list..."
+					self.subtitle_label.label = viewip
+					
+					self.title_label:draw(x + height + FU * 4, y + FU * 4)
+					self.subtitle_label:draw(x + height + FU * 4, y + FU * 4 + FU * 10)
+					
+					DrawSpinner(x + height / 2, y + height / 2)
 				elseif cl_mode == CL_VIEWSERVER then
 					self.title_label.label = serverlist[joinnode].info.servername
 					self.subtitle_label.label = serverlist[joinnode].info.maptitle
+					
+					self.title_label:draw(x + FU * 4, y + FU * 4)
+					self.subtitle_label:draw(x + FU * 4, y + FU * 4 + FU * 10)
+				elseif cl_mode == CL_CHECKFILES then
+					self.title_label.label = "Checking server addon list..."
+					self.subtitle_label.label = "0/0"
 					
 					self.title_label:draw(x + FU * 4, y + FU * 4)
 					self.subtitle_label:draw(x + FU * 4, y + FU * 4 + FU * 10)
@@ -351,15 +504,24 @@ menus.Sonikm = Menu:new{
 				elseif cl_mode == CL_VIEWSERVER then
 					self.visible = true
 					
-					local playernum = 0
-					for i = 0, #playerinfo do
-						if playerinfo[i] then
-							v.drawString(x + FU * 4, y + playernum * FU * 10 + FU * 4, i..". "..playerinfo[i].name, V_ALLOWLOWERCASE, "thin-fixed")
-							v.drawString(x + width - FU * 4, y + playernum * FU * 10 + FU * 4, playerinfo[i].score, V_ALLOWLOWERCASE, "thin-fixed-right")
-							playernum = $ + 1
+					local num = 0
+					
+					if not menu.showing_addons then
+						for i = 0, #playerinfo do
+							if playerinfo[i] then
+								v.drawString(x + FU * 4, y + num * FU * 10 + FU * 4, i..". "..playerinfo[i].name, V_ALLOWLOWERCASE, "thin-fixed")
+								v.drawString(x + width - FU * 4, y + num * FU * 10 + FU * 4, playerinfo[i].score, V_ALLOWLOWERCASE, "thin-fixed-right")
+								num = $ + 1
+							end
+						end
+					else
+-- 						v.drawString(x + FU * 4, y, "addons", V_ALLOWLOWERCASE, "thin-fixed")
+						for i, file in ipairs(fileneeded) do
+							v.drawString(x + FU * 4, y + num * FU * 10 + FU * 4, i..". "..file.filename, V_ALLOWLOWERCASE, "thin-fixed")
+-- 							v.drawString(x + width - FU * 4, y + num * FU * 10 + FU * 4, playerinfo[i].score, V_ALLOWLOWERCASE, "thin-fixed-right")
+							num = $ + 1
 						end
 					end
-					
 				end
 			end
 		},
@@ -372,9 +534,16 @@ menus.Sonikm = Menu:new{
 -- 		MenuItem_UI_Button:new{body = "Rno", align = "center"},
 -- 		MenuItem_UI_Button:new{body = "Noo", align = "center"},
 		MenuItem_UI_Button:new{body = "Back", align = "center", action = function(button)
-			ShowPopup(serverlist[joinnode].info.servername, "No.")
+			ShowPopup(serverlist[joinnode] and serverlist[joinnode].info.servername or "Server", "No.")
 		end},
-		MenuItem_UI_Button:new{body = "Join", align = "center"},
+		MenuItem_UI_Button:new{body = "Join", align = "center", action = function(button)
+			cl_mode = CL_CHECKFILES
+		end},
+		MenuItem_UI_Button:new{body = "Addons", align = "center", action = function(button)
+			local menu = button.parent
+			
+			menu.showing_addons = not $
+		end},
 	},
 }
 
