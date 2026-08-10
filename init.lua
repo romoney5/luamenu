@@ -20,6 +20,13 @@ local directory = { "/",
 		"MenuItem_Popup.lua",
 	},
 	
+	--luainlua adapted from soashi's mmt
+	{ "LuainLua",
+		"Yueliang.lua",
+		"FiOne.lua",
+		"main.lua",
+	},
+	
 	"MenuData.lua",
 	"MenuData_Server.lua",
 	"MenuData_LevelSelect.lua",

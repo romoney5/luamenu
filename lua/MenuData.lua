@@ -319,6 +319,7 @@ menus.OptionsMenu = Menu:new{
 		MenuItem_Button:new{label = "Sound Options...", desc = "Change audio settings", link = "OptionsMenu_Sound", spacing = FU * 2 + FU * 10},
 		
 		MenuItem_Button:new{label = "Server Options...", desc = "Change server hosting settings", link = "OptionsMenu_Server", spacing = FU * 2 + FU * 10},
+		--MenuItem_Button:new{label = "Server Options...?", condition = do return leveltime % 2 end, desc = "Change server hosting settings", link = "OptionsMenu_Server", spacing = FU * 2 + FU * 10},
 		
 		MenuItem_Button:new{label = "Data Options...", desc = "Manage data, screenshots, etc.", link = "OptionsMenu_Data", spacing = FU * 2 + FU * 10},
 		
@@ -501,6 +502,14 @@ menus.OptionsMenu_Luamenu_DevTools = Menu:new{
 				MenuItem_Button:new{label = "Xdf", desc = "Xdf", cvar = CV_FindVar("xdf") or CV_RegisterVar{name = "xdf", defaultvalue = "Xdf"}, spacing = FU * 2},
 			},
 		}), spacing = FU * 2},
+		MenuItem_Textbox:new{label = "Run Lua", desc = "Run a line of Lua locally using LuainLua",
+		action = function(self)
+			local success, msg = LIL_Run(consoleplayer, self.value)
+			
+			if msg then
+				ShowPopup(self.label, tostring(msg))
+			end
+		end, spacing = FU * 2},
 		
 		MenuItem_Header:new{label = "Display"},
 		MenuItem_Button:new{label = "Show Internal Option Names", desc = "Show internal names for cvars and prefs", pref = pref_luamenu_debugoptionnames, spacing = FU * 2},

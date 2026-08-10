@@ -10,6 +10,31 @@ local function hybridPadding()
 	return FU * 3 / 2 + pref_luamenu_rounded.value / 2
 end
 
+--snagged from https://www.lua.org/pil/7.3.html
+local function menuIterate(a, i)
+	local v
+
+	repeat
+		i = $ + 1
+		
+		v = a[i]
+		
+		if v ~= nil then
+			if type(v) == "table" and v.condition and not v:condition() then
+				--return i, nil
+				continue
+			end
+			
+			return i, v
+		end
+	until v == nil
+end
+
+--NOTE: some items can be skipped
+local function menuIpairs(a)
+	return menuIterate, a, 0
+end
+
 function Menu:new(a)
 	local a = self.super:new(a)
 	setmetatable(a, self)
@@ -53,7 +78,7 @@ end
 --this should be called when adding/removing items
 function Menu:updateItems()
 	--link the items to the menu page
-	for i, item in ipairs(self.items) do
+	for i, item in menuIpairs(self.items) do
 		item.parent = self
 		item.index = i
 	end
@@ -120,7 +145,7 @@ function Menu:updateScroll()
 		if mouse_pressed and not mouse_drag.dragging and not current_popup then
 			local menux, menuy = self:getPosition()
 			menuy = $ - self.scroll
-			for i, item in ipairs(self.items) do
+			for i, item in menuIpairs(self.items) do
 				local width, height = item:getBounds()
 				local y = self:getYPositionAt(i) + menuy
 				
@@ -220,7 +245,7 @@ function Menu:getPosition()
 	elseif anchor.y == "center" then
 		local height = 0
 		
-		for i, item in ipairs(self.items) do
+		for i, item in menuIpairs(self.items) do
 			local w, h = item:getBounds()
 			
 			height = $ + h
@@ -230,7 +255,7 @@ function Menu:getPosition()
 	elseif anchor.y == "bottom" then
 		local height = 0
 		
-		for i, item in ipairs(self.items) do
+		for i, item in menuIpairs(self.items) do
 			local w, h = item:getBounds()
 			
 			height = $ + h
@@ -279,7 +304,7 @@ function Menu:draw()
 		local box_index = 1
 		local padding = hybridPadding() * 3 / 2
 		
-		for i, item in ipairs(self.items) do
+		for i, item in menuIpairs(self.items) do
 			local py = self:getYPositionAt(i)
 			local align, align_string, factor = item:getAlignment()
 -- 			local width, height = item:getBounds()
@@ -323,7 +348,7 @@ function Menu:draw()
 	end
 	
 	--draw all items
-	for i, item in ipairs(self.items) do
+	for i, item in menuIpairs(self.items) do
 		local py = self:getYPositionAt(i)
 		local align, align_string, factor = item:getAlignment()
 		item.align_string = align_string
@@ -362,7 +387,7 @@ end
 function Menu:getYPositionAt(index)
 	local y = 0
 	
-	for i, item in ipairs(self.items) do
+	for i, item in menuIpairs(self.items) do
 		if i > 1 then
 			y = $ + item.pre_spacing
 		end
@@ -404,7 +429,8 @@ function Menu:scrollBy(scrollby)
 			self.selection = #self.items
 		end
 		
-		if self.items[self.selection] and self.items[self.selection]:canSelect() then
+		if self.items[self.selection] and self.items[self.selection]:canSelect()
+		and not (self.items[self.selection].condition and not self.items[self.selection]:condition()) then
 			break
 		end
 		
