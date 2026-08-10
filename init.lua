@@ -1,7 +1,7 @@
 --load all of orbit's files
 local directory = { "/",
 	"Class.lua",
-	"me.lua",
+	"Menu.lua",
 	
 // 	--libraries
 // 	{ "libraries",

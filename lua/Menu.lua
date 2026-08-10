@@ -2,7 +2,7 @@
 
 if not takis_luamenu then return end
 
-local menus
+local menus = {}
 
 local cv_menucaps = CV_FindVar("menucaps")
 local cv_menucolor = CV_FindVar("menucolor")
@@ -89,6 +89,7 @@ function Menu:new(a)
 	
 	a.on_draw = $ or nil
 	a.on_entry = $ or nil
+	a.on_exit = $ or nil
 	
 	a.parent = $ or nil
 	
@@ -586,7 +587,12 @@ local function Input(key)
 				menus[current_menu]:on_exit(menu.parent)
 			end
 			
+			local old_menu = current_menu
 			current_menu, menu.parent = menu.parent, nil
+			
+			if menus[current_menu] and menus[current_menu].on_entry then
+				menus[current_menu]:on_entry(old_menu)
+			end
 		else
 			SetActive(false)
 		end
@@ -640,9 +646,11 @@ local function Input(key)
 end
 
 local mouse_pressed = false
-menus = loadfile("menus.lua")(v)
+loadfile("MenuData.lua")(menus, v)
 
 local function Drawer(drawer, player)
+-- 	local serverlistcount = #serverlist
+-- 	print(serverlistcount, servernode)
 	if not menuactive then return end
 	
 	--localize drawing functions into a table

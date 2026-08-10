@@ -1,6 +1,6 @@
 --the actual menu data
-local menus = {}
-local v = ...
+local menus, v = ...
+loadfile("MenuData_Server.lua")(menus, v)
 
 --title screen menu
 
@@ -154,6 +154,8 @@ menus.MultiplayerMenu = Menu:new{
 	width = FU * 320 - FU * 30 * 2,
 	height = FU * 200 - FU * 20 * 2,
 	
+-- 	on_entry = ClearMultiplayer,
+	
 	items = {
 		MenuItem_Header:new{label = "Join a game"},
 		MenuItem_Button:new{label = "Server browser...", link = "ServerBowser", spacing = FU * 2},
@@ -170,206 +172,6 @@ menus.MultiplayerMenu = Menu:new{
 	},
 }
 
-
---server bowser
---w flaffy
-
-local masterserver = CV_FindVar("masterserver")
-
---thax https://gist.github.com/jaredallard/ddb152179831dd23b230
---i did have to clean up some nasty whitespace though
-local function string_split(self, delimiter)
-	local result = {}
-	local from = 1
-	local delim_from, delim_to = string.find(self, delimiter, from)
-	while delim_from do
-		table.insert(result, string.sub(self, from, delim_from - 1))
-		from  = delim_to + 1
-		delim_from, delim_to = string.find(self, delimiter, from)
-	end
-	table.insert(result, string.sub(self, from))
-	return result
-end
-
---for slow internet (there is a cvar for this, use NUMBER timeout)
-HTTP.setDefaultTimeout(20)
-
-menus.ServerBowser = Menu:new{
-	anchor = {x = "center", y = "top"},
-	width = FU * 320 - FU * 25 * 2,
-	height = FU * 200 - FU * 20 * 2,
-	
-	on_draw = function(self, v)
-		if self.loading then
-			local bg = v.cachePatch("MENU_LOAD1")
-			v.drawScaled(FU * 160, FU * 100, FU / 2, bg, V_50TRANS)
-			
-			local spinner = v.cachePatch("MENU_LOAD2", FixedAngle(FU * leveltime * -8))
-			v.drawScaled(FU * 160, FU * 100, FU / 2, spinner, 0)
-		end
-	end,
-	
-	on_entry = function(self, old_menu)
-		--TODO: menuitem free position option..?
-		print("Contacting master server...")
-		
-		self.items = {
-			MenuItem_Header:new{label = "Contacting master server..."},
-		}
-		
-		self:updateItems()
-		
-		if not HTTP then
--- 			ShowPopup("LEGO Island", "Oops! You have to put the CD\nin your computer.")
-			ShowPopup("Server Bowser", "You do not have a custom build\nwith HTTP request functionality.")
-			
-			return
-		end
-		
-		local function handleResponseError(response)
-			if not response then
-				ShowPopup("Server Bowser", "Failed to fetch from HTTP.\nPlease try again.")
-				return
-			end
-			
-			if response.message then
-				print("error:", response.message)
-				return
-			end
-		end
-		
-		local function connect(button)
-			local server = button.ms_server
-			COM_BufInsertText(nil, "connect "..server.ip.." "..server.port)
-		end
-		
-		local function get_servers(button)
-			self.items = {
-				MenuItem_Header:new{label = "Loading servers..."},
-			}
-			
-			self:updateItems()
-			self.loading = true
-			
-			HTTP.get(("%s/rooms/%d/servers"):format(masterserver.string, button.ms_id), function(response)
-				self.loading = false
-				handleResponseError(response)
-				
-				local body = HTTP.decodeURL(response.body)
-				local servs = {}
-				local lines = string_split(body, "\n")
-				
-				for i, line in ipairs(lines) do
-					if i == 1 then continue end --room number
-					if i == #lines then break end
-					
-					local server = {}
-					local words = string_split(line, " ")
-					
-					for i, word in ipairs(words) do
-						if i == 1 then --server ip address
-							server.ip = word
-						elseif i == 2 then --server port
-							server.port = word
-						elseif i ~= #words then --server name
-							server.name = ($ or "")..word..(i ~= #words - 1 and " " or "")
-						else --server game version
-							server.version = word
-						end
-					end
-					
-					table.insert(servs, server)
-				end
-				
-				self.items = {
-					MenuItem_Header:new{label = "Select a server"},
-				}
-				
-				for i, server in ipairs(servs) do
-					table.insert(self.items, MenuItem_Button:new{label = ("%s (%s:%s)"):format(server.name, server.ip, server.port),
-						spacing = FU * 2, action = connect, ms_server = server})
-				end
-				
-				self:updateItems()
-			end)
-		end
-		
-		local function get_rooms(response)
-			self.loading = false
-			handleResponseError(response)
-			
-			local body = HTTP.decodeURL(response.body)
-			local rooms = {}
-			local state = {}
-			
-			for i, line in ipairs(string_split(body, "\n")) do
-				if not state.in_room then
-					state.in_room = true
-					state.room = {}
-					state.line_num = 1
-					state.empty_lines = 0
-				end
-				
-				local room = state.room
-				
-				if state.line_num == 1 then --room id
-					room.id = tonumber(line)
-				elseif state.line_num == 2 then --room name
-					room.name = tostring(line)
-					print("got name "..room.name)
-				else --probably the description
-					room.desc = ($ or "")..tostring(line).."\n"
-				end
-				
-				if line == "" then
-					state.empty_lines = $ + 1
-				else
-					state.empty_lines = 0
-				end
-				
-				if state.empty_lines == 2 then
-					state.in_room = false
-					table.insert(rooms, state.room)
-				end
-				
-				state.line_num = $ + 1
-				
--- 				print(line)
-			end
-			
-			self.items = {
-				MenuItem_Header:new{label = "Select a room"},
-			}
-			
-			for i, v in ipairs(rooms) do
-				table.insert(self.items, MenuItem_Button:new{label = v.id..": "..v.name,
-					spacing = FU * 2, ms_id = v.id, action = get_servers})
-			end
-			
-			self:updateItems()
--- 			HTTP.get(("%s/rooms"):format(masterserver.string), get_rooms)
-		end
-		
-		local function get_version(response)
-			handleResponseError(response)
-			
-			self.items = {
-				MenuItem_Header:new{label = "Loading rooms..."},
-			}
-			
-			self:updateItems()
-			
-			HTTP.get(("%s/rooms"):format(masterserver.string), get_rooms)
-		end
-		
-		self.loading = true
-		HTTP.get(("%s/versions/%d"):format(masterserver.string, MODID), get_version)
-	end,
-	
-	items = {
-		MenuItem_Button:new{label = "Server browser...", link = "ServerBowser", spacing = FU * 2},
-	},
-}
 
 menus.OptionsMenu = Menu:new{
 	anchor = {x = "center", y = "top"},
@@ -553,6 +355,7 @@ menus.SP_MainMenu = Menu:new{
 	
 	on_entry = function(self, old_menu)
 		--reset to Continue on pause and set the cursor instantly
+		if old_menu then return end
 		self.selection = 5
 		self:updateItems()
 	end,
@@ -597,5 +400,3 @@ menus.SP_MainMenu = Menu:new{
 		end},
 	},
 }
-
-return menus
