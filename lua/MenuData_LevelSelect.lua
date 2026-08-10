@@ -51,15 +51,14 @@ local function draw(self, v)
 	scroll = ease.linear(v.renderdeltatics() / 3, $, FU * (row - 1) * 80)
 
 	// drawing part
-	local yCursor = 0
-
-	for i = 1, #self.order do
+	--for i = 1, #self.order do
+	for i = max(row - 2, 1), min(row + 2, #self.order) do
 		local key = self.order[i]
 		local list = self.categories[key]
 
 		// zone header
-		local headerY = FU * 75 + FU * yCursor * 80 - scroll
-		local selected = (yCursor+1 == row)
+		local headerY = FU * 75 + FU * (i - 1) * 80 - scroll
+		local selected = (i == row)
 		v.drawString(FU * 20, headerY - FU * 14, key.." Zone", (selected and cv_menucolor.value or 0)|MENUCAPS(), "fixed")
 		v.drawFixedFill(FU * 20, headerY - FU * 5, FU * 281, FU * 2, 28)
 		v.drawFixedFill(FU * 20, headerY - FU * 5, FU * 280, FU * 1, selected and yellowColor or 0)
@@ -74,7 +73,7 @@ local function draw(self, v)
 
 				if id then
 					local x = FU * 20 + FU * columnIndex * 100
-					local y = FU * 75 + FU * yCursor * 80 - scroll
+					local y = FU * 75 + FU * (i - 1) * 80 - scroll
 					
 					local mapGraphic
 					if v.patchExists(G_BuildMapName(id).."P") then
@@ -88,7 +87,7 @@ local function draw(self, v)
 					local info = mapheaderinfo[id]
 					v.drawFixedFill(x, y + FU * 50, FU * 80, FU * 8, cv_menubgcolor.value)
 					
-					local act_flags = ((yCursor + 1 == row and columnIndex + 1 == xSel) and cv_menucolor.value or 0)|MENUCAPS()
+					local act_flags = ((i == row and columnIndex + 1 == xSel) and cv_menucolor.value or 0)|MENUCAPS()
 					
 					if info.actnum then
 						v.drawString(x, y + FU * 50, "Act "..info.actnum, act_flags, "fixed")
@@ -97,8 +96,6 @@ local function draw(self, v)
 					end
 				end
 			end
-
-			yCursor = $ + 1
 		end
 	end
 	
@@ -168,7 +165,8 @@ menus.LevelSelect = Menu:new{
 				
 				function next_action()
 					Menu_SetActive(false)
-					G_ExitLevel(id, 1)
+-- 					G_ExitLevel(id, 1)
+					COM_BufInsertText(nil, "map "..id)
 				end
 			else
 				scroll = $ + FU * 8
