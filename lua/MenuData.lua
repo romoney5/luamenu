@@ -64,7 +64,7 @@ menus.MainMenu = Menu:new{
 	items = {
 		MenuItem_Button:new{label = "1  Player", align = "center", link = "SingleplayerMenu"},
 		MenuItem_Button:new{label = "Multiplayer", align = "center", link = "MultiplayerMenu"},
-		MenuItem_Button:new{label = "Level Selecttwo...", link = "LevelSelect", spacing = FU * 8},
+		MenuItem_Button:new{label = "Level Selecttwo...", align = "center", link = "LevelSelect"},
 		MenuItem_Button:new{label = "Extras", align = "center", link = "ExtrasMenu"},
 		MenuItem_Button:new{label = "Addons", align = "center", link = "AddonsMenu"},
 		MenuItem_Button:new{label = "Options", align = "center", link = "OptionsMenu"},
@@ -117,6 +117,8 @@ menus.SingleplayerMenu_StartGame = Menu:new{
 		if scrollby then
 			self.save_select = $ + scrollby
 			self.save_scroll = $ + scrollby * FU * 100
+			
+			S_StartSound(nil, sfx_s3kb7)
 		end
 		
 		--M_LoadSelect
@@ -139,14 +141,15 @@ menus.SingleplayerMenu_StartGame_CharSelect = Menu:new{
 	end,
 	
 	on_exit = function(self, old_menu)
-		S_ChangeMusic("_title")
+		S_ChangeMusic("_title", false)
 	end,
 	
+	char_selection = 0,
 	char_scroll = 0,
 	time = 0,
 	
 	on_draw = function(self, v)
-		local skin = skins[0]
+		local skin = skins[self.char_selection]
 		local color
 		
 		if skin.prefoppositecolor then
@@ -185,12 +188,13 @@ menus.SingleplayerMenu_StartGame_CharSelect = Menu:new{
 	
 	on_input = function(self, key, name)
 		local scrollby = 0
-		if name == "right arrow" then scrollby = 1 end
-		if name == "left arrow" then scrollby = -1 end
+		if name == "down arrow" then scrollby = 1 end
+		if name == "up arrow" then scrollby = -1 end
 		
 		if scrollby then
-			self.save_select = $ + scrollby
-			self.save_scroll = $ + scrollby * FU * 100
+			self.char_selection = $ + scrollby
+			
+			S_StartSound(nil, sfx_s3kb7)
 		end
 		
 		--M_LoadSelect
@@ -380,7 +384,7 @@ menus.OptionsMenu_Luamenu = Menu:new{
 		MenuItem_Button:new{label = "Uppercase Menus", desc = "Force uppercase text in menus", cvar = CV_FindVar("menucaps"), spacing = FU * 2}, --srb2-edit
 		MenuItem_Button:new{label = "Highlight Color", desc = "Change the color of highlighted text", cvar = CV_FindVar("menucolor"), spacing = FU * 2}, --srb2-edit, romoney5
 		MenuItem_Button:new{label = "Background Color", desc = "Change the color of backgrounds", cvar = CV_FindVar("menubgcolor"), spacing = FU * 2}, --gks edit
-		MenuItem_Button:new{label = "Stylized Sliders", desc = "Enable rounded sliders", cvar = CV_FindVar("luamenu_sliders"), spacing = FU * 2},
+		MenuItem_Button:new{label = "Stylized Sliders", desc = "Enable Luamenu-styled sliders", cvar = CV_FindVar("luamenu_sliders"), spacing = FU * 2},
 		MenuItem_Slider:new{label = "Rounded Corners", desc = "Change the size of rounded corners on boxes", slider_step = FU / 4, cvar = CV_FindVar("luamenu_rounded"), spacing = FU * 2},
 		
 		MenuItem_Header:new{label = "Miscellaneous"},
@@ -396,20 +400,60 @@ menus.OptionsMenu_Luamenu = Menu:new{
 				end},
 			})
 		end, spacing = FU * 2},
+		MenuItem_Button:new{label = "Dev Tools...", link = "OptionsMenu_Luamenu_DevTools", spacing = FU * 2},
 	},
 }
 
---[[menus.OptionsMenu_Luamenu = Menu:new{
+menus.OptionsMenu_Luamenu_DevTools = Menu:new{
 	anchor = {x = "center", y = "top"},
 	width = FU * 320 - FU * 30 * 2,
 	height = FU * 200 - FU * 20 * 2,
-	title = "XDF",
+	title = "DEV TOOLS",
+	
+	show_version = true,
 	
 	items = {
-		MenuItem_Header:new{label = "Xdf"},
-		MenuItem_Button:new{label = "Xdf", desc = "Xdf", cvar = CV_RegisterVar{name = "xdf", defaultvalue = "Xdf"}, spacing = FU * 2},
+		--MenuItem_Header:new{label = "Functionality"},
+		MenuItem_Button:new{label = "Verify Menu Links", desc = "",
+		verify_menu = function(self, menu, bad, stack)
+			for i, v in ipairs(menus[menu].items) do
+				if v.link then
+					if menus[v.link] then
+						if stack >= 32 then
+							table.insert(bad, menu..">"..(v.label or ("Item "..i)).." (overflow)")
+						else
+							self:verify_menu(v.link, bad, stack + 1)
+						end
+					else
+						table.insert(bad, menu..">"..(v.label or ("Item "..i)))
+					end
+				end
+			end
+		end,
+		action = function(self)
+			local bad = {}
+			
+			for i, menu in pairs(menus) do
+				self:verify_menu(i, bad, 1)
+			end
+			
+			ShowPopup("Verify Menu Links", "The following menu items have invalid links:\n\n"..table.concat(bad, "\n"))
+			
+			current_popup.width = FU * 300
+		end, spacing = FU * 2},
+		MenuItem_Button:new{label = "Xdf", desc = "Xdf", link = new_menu("OptionsMenu_Xdf", Menu:new{
+			anchor = {x = "center", y = "top"},
+			width = FU * 320 - FU * 30 * 2,
+			height = FU * 200 - FU * 20 * 2,
+			title = "XDF",
+			
+			items = {
+				MenuItem_Header:new{label = "Xdf"},
+				MenuItem_Button:new{label = "Xdf", desc = "Xdf", cvar = CV_FindVar("xdf") or CV_RegisterVar{name = "xdf", defaultvalue = "Xdf"}, spacing = FU * 2},
+			},
+		}), spacing = FU * 2},
 	},
-}]]
+}
 
 local function GetControls(control, secondary)
 	local controls
@@ -517,7 +561,33 @@ menus.OptionsMenu_P1Controls = Menu:new{
 				MenuItem_Slider:new{label = "Mouse Y Sensitivity", slider_step = 2, desc = "Change vertical mouse sensitivity", cvar = CV_FindVar("mouseysens"), spacing = FU * 2 + FU * 10},
 			},
 		}), spacing = FU * 2},
-		MenuItem_Button:new{label = "Gamepad Options...", desc = "Change controller settings", link = "a", spacing = FU * 2 + FU * 10},
+		MenuItem_Button:new{label = "Gamepad Options...", desc = "Change controller settings", link = new_menu("OptionsMenu_P1Controls_Gamepad", Menu:new{
+			anchor = {x = "center", y = "top"}, width = FU * 320 - FU * 50 * 2, height = FU * 200 - FU * 20 * 2,
+			title = "CONTROL SETUP",
+			
+			items = {
+				MenuItem_Button:new{label = "Select Gamepad...", desc = "Choose controller", link = new_menu("OptionsMenu_P1Controls_Gamepad_Select", Menu:new{
+					--fun fact: this menu is gravely off-centered in vanilla
+					anchor = {x = "center", y = "top"}, width = FU * 320 - FU * 50 * 2, height = FU * 200 - FU * 20 * 2,
+					title = "CONTROL SETUP",
+					
+					items = {}, --No
+				}), spacing = FU * 2 + FU * 10},
+				MenuItem_Button:new{label = "Move \x17 Axis", desc = "Axis for forward movement", cvar = CV_FindVar("joyaxis_move"), spacing = FU * 2},
+				MenuItem_Button:new{label = "Move \x18 Axis", desc = "Axis for sideway movement", cvar = CV_FindVar("joyaxis_side"), spacing = FU * 2},
+				MenuItem_Button:new{label = "Camera \x17 Axis", desc = "Axis for vertical camera movement", cvar = CV_FindVar("joyaxis_look"), spacing = FU * 2},
+				MenuItem_Button:new{label = "Camera \x18 Axis", desc = "Axis for horizontal camera movement", cvar = CV_FindVar("joyaxis_turn"), spacing = FU * 2},
+				MenuItem_Button:new{label = "Jump Axis", desc = "Axis for jumping", cvar = CV_FindVar("joyaxis_jump"), spacing = FU * 2},
+				MenuItem_Button:new{label = "Spin Axis", desc = "Axis for spinning", cvar = CV_FindVar("joyaxis_spin"), spacing = FU * 2},
+				MenuItem_Button:new{label = "Fire Axis", desc = "Axis for the Fire button", cvar = CV_FindVar("joyaxis_fire"), spacing = FU * 2},
+				MenuItem_Button:new{label = "Fire Normal Axis", desc = "Axis for the Fire Normal button", cvar = CV_FindVar("joyaxis_firenormal"), spacing = FU * 2 + FU * 10},
+				
+				MenuItem_Button:new{label = "First-Person Vert-Look", desc = "Enable vertical camera movement in first-person", cvar = CV_FindVar("alwaysmlook"), spacing = FU * 2},
+				MenuItem_Button:new{label = "Third-Person Vert-Look", desc = "Enable vertical camera movement in third-person", cvar = CV_FindVar("chasemlook"), spacing = FU * 2},
+				MenuItem_Slider:new{label = "Analog Deadzone", desc = "Deadzone for analog (e.g. joystick) buttons", slider_step = FU * 5 / 100, cvar = CV_FindVar("joy_deadzone"), spacing = FU * 2},
+				MenuItem_Slider:new{label = "Digital Deadzone", desc = "Deadzone for digital (e.g. face button) buttons", slider_step = FU * 5 / 100, cvar = CV_FindVar("joy_digdeadzone"), spacing = FU * 2},
+			},
+		}), spacing = FU * 2 + FU * 10},
 		
 		MenuItem_Button:new{label = "Camera Options...", desc = "Change camera settings", link = new_menu("OptionsMenu_P1Controls_Camera", Menu:new{
 			anchor = {x = "center", y = "top"}, width = FU * 320 - FU * 30 * 2, height = FU * 200 - FU * 20 * 2,
@@ -540,9 +610,9 @@ menus.OptionsMenu_P1Controls = Menu:new{
 				MenuItem_Button:new{label = "Crosshair", desc = "Show a crosshair at the center in first-person", cvar = CV_FindVar("crosshair"), spacing = FU * 2},
 				MenuItem_Button:new{label = "Inverted Crosshair", desc = "Invert the crosshair's color against the background", cvar = CV_FindVar("crosshair_invert"), spacing = FU * 2},
 				
-				MenuItem_Header:new{label = "Miscellaneous"},
-				MenuItem_Button:new{label = "Exact Camera", desc = "Enable precise third-person camera movement", cvar = CV_FindVar("cam_exact"), spacing = FU * 2}, --romoney5
-				MenuItem_Button:new{label = "Clipping Style", desc = "Change third-person camera clipping behavior", cvar = CV_FindVar("cam_clipping"), spacing = FU * 2}, --romoney5
+-- 				MenuItem_Header:new{label = "Miscellaneous"},
+-- 				MenuItem_Button:new{label = "Exact Camera", desc = "Enable precise third-person camera movement", cvar = CV_FindVar("cam_exact"), spacing = FU * 2}, --romoney5
+-- 				MenuItem_Button:new{label = "Clipping Style", desc = "Change third-person camera clipping behavior", cvar = CV_FindVar("cam_clipping"), spacing = FU * 2}, --romoney5
 			},
 		}), spacing = FU * 2 + FU * 10},
 		
@@ -605,6 +675,60 @@ menus.OptionsMenu_Video = Menu:new{
 		MenuItem_Header:new{label = "Renderer"},
 		MenuItem_Button:new{label = "OpenGL Options...", link = "OptionsMenu_Video_OpenGL", spacing = FU * 2},
 		MenuItem_Button:new{label = "FPS Cap", cvar = CV_FindVar("fpscap"), spacing = FU * 2},
+	},
+}
+
+menus.OptionsMenu_Video_Resolution = Menu:new{
+	anchor = {x = "center", y = "top"},
+	width = FU * 320 - FU * 30 * 2,
+	height = FU * 200 - FU * 20 * 2,
+	title = "VIDEO OPTIONS",
+	
+	items = {
+		MenuItem_Button:new{label = "Do nothing", desc = "It actually does nothing", action = nil, spacing = FU * 2},
+	},
+}
+
+local function ResetCvars(self)
+	if not self.parent then return end
+	
+	for i, v in ipairs(self.parent.items) do
+		if v.cvar then
+			Banpyura.CV_ForceSet(v.cvar, v.cvar.defaultvalue)
+			--tonumber(v.cvar.defaultvalue)?
+		end
+	end
+end
+
+menus.OptionsMenu_Video_Color = Menu:new{
+	anchor = {x = "center", y = "top"},
+	width = FU * 320 - FU * 30 * 2,
+	height = FU * 200 - FU * 20 * 2,
+	title = "VIDEO OPTIONS",
+	
+	items = {
+		MenuItem_Button:new{label = "Reset to defaults", action = ResetCvars, spacing = FU * 2},
+		
+		(function(colors)
+			local out = {}
+			
+			for i, color in ipairs(colors) do
+				table.insert(out, MenuItem_Header:new{label = color[1], color = color[2]})
+				table.insert(out, MenuItem_Slider:new{label = "Hue", cvar = CV_FindVar(color[3].."hue"), spacing = FU * 2})
+				table.insert(out, MenuItem_Slider:new{label = "Saturation", cvar = CV_FindVar(color[3].."saturation"), spacing = FU * 2})
+				table.insert(out, MenuItem_Slider:new{label = "Brightness", cvar = CV_FindVar(color[3].."gamma"), spacing = FU * 2})
+			end
+			
+			return unpack(out)
+		end){
+				--header name, header color, cvar prefix
+				{"Red", V_REDMAP, "r"},
+				{"Yellow", V_YELLOWMAP, "y"},
+				{"Green", V_GREENMAP, "g"},
+				{"Cyan", V_AQUAMAP, "c"},
+				{"Blue", V_BLUEMAP, "b"},
+				{"Magenta", V_MAGENTAMAP, "m"},
+			},
 	},
 }
 
@@ -746,6 +870,59 @@ menus.OptionsMenu_Server = Menu:new{
 		MenuItem_Button:new{label = "Maximum File Size", desc = "Max. size of a file the server will send", cvar = CV_FindVar("maxsend"), spacing = FU * 2},
 		
 -- 		MenuItem_Button:new{label = "Advanced", desc = "", link = "OptionsMenu_Server_Advanced", spacing = FU * 2}, --romoney5
+	},
+}
+
+local function MonitorDraw(self, x, y)
+	if not self.cvar or not self.parent then return end
+	
+	local display = FixedDiv(FU * self.cvar.value, FU * self.parent.sum or 1) * 100
+	display = FixedDecimal(display, display >= FU * 100 and 1 or 2).."%"
+
+	v.drawString(x + self.parent.width + FU * 50, y, display, 0, "fixed-right")
+end
+
+menus.OptionsMenu_Server_Monitors = Menu:new{
+	anchor = {x = "center", y = "top"},
+	width = FU * 320 - FU * 50 * 2,
+	height = FU * 200 - FU * 20 * 2,
+	x_offset = -FU * 20,
+	title = "SERVER OPTIONS",
+	
+	sum = 0,
+	
+	on_draw = function(self, v)
+		self.sum = 0
+		
+		for i, item in ipairs(self.items) do
+			if not item.cvar then continue end
+			
+			self.sum = $ + item.cvar.value
+		end
+	end,
+	
+	on_entry = function(self, old_menu)
+		--update the sum
+		self:on_draw()
+	end,
+	
+	items = {
+		MenuItem_Button:new{label = "Reset to defaults", action = ResetCvars, spacing = FU * 2 + FU * 10},
+		
+		--a generator is not worth it here
+		MenuItem_Slider:new{label = "Recycler", cvar = CV_FindVar("tv_recycler"), on_draw = MonitorDraw, spacing = FU * 2},
+		MenuItem_Slider:new{label = "Teleport", cvar = CV_FindVar("tv_teleporter"), on_draw = MonitorDraw, spacing = FU * 2},
+		MenuItem_Slider:new{label = "Super Ring", cvar = CV_FindVar("tv_superring"), on_draw = MonitorDraw, spacing = FU * 2},
+		MenuItem_Slider:new{label = "Super Sneakers", cvar = CV_FindVar("tv_supersneaker"), on_draw = MonitorDraw, spacing = FU * 2},
+		MenuItem_Slider:new{label = "Invincibility", cvar = CV_FindVar("tv_invincibility"), on_draw = MonitorDraw, spacing = FU * 2},
+		MenuItem_Slider:new{label = "Whirlwind Shield", cvar = CV_FindVar("tv_jumpshield"), on_draw = MonitorDraw, spacing = FU * 2},
+		MenuItem_Slider:new{label = "Elemental Shield", cvar = CV_FindVar("tv_watershield"), on_draw = MonitorDraw, spacing = FU * 2},
+		MenuItem_Slider:new{label = "Attraction Shield", cvar = CV_FindVar("tv_ringshield"), on_draw = MonitorDraw, spacing = FU * 2},
+		MenuItem_Slider:new{label = "Force Shield", cvar = CV_FindVar("tv_forceshield"), on_draw = MonitorDraw, spacing = FU * 2},
+		MenuItem_Slider:new{label = "Armageddon Shield", cvar = CV_FindVar("tv_bombshield"), on_draw = MonitorDraw, spacing = FU * 2},
+		--srb2 monitor names try not to be inaccurate challenge (impossible)
+		MenuItem_Slider:new{label = "1 Up", cvar = CV_FindVar("tv_1up"), on_draw = MonitorDraw, spacing = FU * 2},
+		MenuItem_Slider:new{label = "Eggman Box", cvar = CV_FindVar("tv_eggman"), on_draw = MonitorDraw, spacing = FU * 2},
 	},
 }
 

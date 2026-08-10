@@ -39,6 +39,8 @@ function Menu:new(a)
 	a.title = $ or ""
 	a.title_label = $ or MenuItem_Text:new{font = "MENU_FONT_HEADER_", label = a.title, align = "center"}
 	
+	a.x_offset = $ or 0
+	
 	a:updateItems()
 	
 	return a
@@ -55,6 +57,7 @@ function Menu:updateItems()
 	--set the selection properly
 	do
 		local x, y = self:getPosition()
+		x = $ + self.x_offset
 		y = $ - self.scroll
 		
 		self:scrollBy(0)
@@ -185,6 +188,11 @@ function Menu:updateScroll()
 		self.dest_scroll = self.scroll
 		self.scroll_vel = max(abs($) - v.renderdeltatics() / 5, 0) * ($ < 0 and -1 or 1)
 	end
+	
+	--[[
+	v.drawScaled(mx, my, FU, cachePatch("M_CURSOR"))
+	v.drawString(0, 0, (mx / FU).."\n"..(my / FU), 0)
+	]]
 end
 
 function Menu:getPosition()
@@ -193,7 +201,7 @@ function Menu:getPosition()
 	local x, y = 0, 0
 	
 	if anchor.x == "center" then
-		x = FU * 320 / 2
+		x = $ + FU * 320 / 2
 	end
 	
 	if anchor.y == "top" then
@@ -258,6 +266,9 @@ function Menu:draw()
 			self.title_label:draw(x, y - FU * 35)
 		end
 	end
+	
+	--this needs to be separate from getPosition because of the header
+	x = $ + self.x_offset
 	
 	--draw all items
 	for i, item in ipairs(self.items) do

@@ -22,14 +22,17 @@ function MenuItem_Text:new(a)
 	a.parent_width = $ or 0
 	
 	a.colored = $ or false
+	a.color = $ or nil
 	a.force_lowercase = $ or false
+	
+	a.on_draw = $ or nil
 	
 	return a
 end
 
 function MenuItem_Text:getFlags(selected)
 	local menucaps = 0--(not cv_menucaps.value) and V_ALLOWLOWERCASE or 0
-	local color = 0
+	local color = self.color or 0
 	
 	--use a custom highlight color if available, otherwise use yellow
 	if (self.parent and self.parent.selection == self.index) or selected then
@@ -195,6 +198,10 @@ function MenuItem_Text:draw(x, y)
 	end
 	
 	self._width = max_width --this should be in recalcLayout
+	
+	if self.on_draw then
+		self:on_draw(x, y)
+	end
 end
 
 function MenuItem_Text:drawArrows(x, y, col)

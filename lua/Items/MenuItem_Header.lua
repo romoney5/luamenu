@@ -27,10 +27,12 @@ function MenuItem_Header:new(a)
 	setmetatable(a, self)
 	
 	a.label = $ or "Header"
-	a.label_label = $ or MenuItem_Text:new{colored = true, label = a.label}
+	a.label_label = $ or MenuItem_Text:new{colored = false, label = a.label}
 	
 	a.pre_spacing = $ or FU * 16
 	a.spacing = $ or FU * 3
+	
+	a.color = $ --or nil
 	
 	return a
 end
@@ -43,9 +45,16 @@ function MenuItem_Header:draw(x, y)
 	local width, height = self:getBounds()
 	local new_x = x - FU * 11
 	
+	local color = self.color
+	
+	if color == nil then
+		color = cv_menucolor.value
+	end
+	
+	self.label_label.color = color
 	self.label_label:draw(new_x, y - FU * 9)
 	
 	local width = FU * 320 - new_x * 2
-	v.drawFixedFill(new_x, y, width + FU, FU * 1 + FU, cv_menucolor.value ~= V_INVERTMAP and 26 or 0) --shadow
-	v.drawFixedFill(new_x, y, width, FU * 1, VMAPToPaletteIndex[cv_menucolor.value] - 1) --line
+	v.drawFixedFill(new_x, y, width + FU, FU * 1 + FU, color ~= V_INVERTMAP and 26 or 0) --shadow
+	v.drawFixedFill(new_x, y, width, FU * 1, VMAPToPaletteIndex[color] - 1) --line
 end

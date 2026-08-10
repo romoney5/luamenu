@@ -3,17 +3,19 @@
 
 --remember, the environment of all luamenu scripts is _G.luamenu
 
-if not _G.gks_luamenu_supported then return end
+if not _G.gks_luamenu_supported or not _G.Banpyura then return end
 _G.gks_luamenu = true
 
-cv_luamenu = CV_RegisterVar{name = "luamenu", defaultvalue = "On", PossibleValue = CV_OnOff, flags = CV_SAVE|CV_CALL, func = function(self)
-	_G.gks_luamenu = self.value and true or false
-	
-	--make sure everything is set back to normal
-	if not self.value then
-		Menu_SetActive(false)
-	end
-end}
+if not loaded then
+	cv_luamenu = CV_RegisterVar{name = "luamenu", defaultvalue = "On", PossibleValue = CV_OnOff, flags = CV_SAVE|CV_CALL, func = function(self)
+		_G.gks_luamenu = self.value and true or false
+		
+		--make sure everything is set back to normal
+		if not self.value then
+			Menu_SetActive(false)
+		end
+	end}
+end
 
 menus = {}
 
@@ -22,12 +24,16 @@ cv_menucaps = CV_FindVar("menucaps") or {value = 1}
 cv_menucolor = CV_FindVar("menucolor") or {value = V_YELLOWMAP}
 cv_menubgcolor = CV_FindVar("menubgcolor") or {value = 159}
 
-cv_luamenu_bgdecos = CV_RegisterVar{name = "luamenu_bgdecos", defaultvalue = "On", PossibleValue = CV_OnOff, flags = CV_SAVE}
-cv_luamenu_anims = CV_RegisterVar{name = "luamenu_anims", defaultvalue = "On", PossibleValue = CV_OnOff, flags = CV_SAVE}
-cv_luamenu_tooltips = CV_RegisterVar{name = "luamenu_tooltips", defaultvalue = "On", PossibleValue = CV_OnOff, flags = CV_SAVE}
-cv_luamenu_showversion = CV_RegisterVar{name = "luamenu_showversion", defaultvalue = "On", PossibleValue = CV_OnOff, flags = CV_SAVE}
-cv_luamenu_rounded = CV_RegisterVar{name = "luamenu_rounded", defaultvalue = "1", PossibleValue = {MIN = 0, MAX = FU * 4}, flags = CV_SAVE|CV_FLOAT}
-cv_luamenu_sliders = CV_RegisterVar{name = "luamenu_sliders", defaultvalue = "On", PossibleValue = CV_OnOff, flags = CV_SAVE}
+if not loaded then
+	cv_luamenu_bgdecos = CV_RegisterVar{name = "luamenu_bgdecos", defaultvalue = "On", PossibleValue = CV_OnOff, flags = CV_SAVE}
+	cv_luamenu_anims = CV_RegisterVar{name = "luamenu_anims", defaultvalue = "On", PossibleValue = CV_OnOff, flags = CV_SAVE}
+	cv_luamenu_tooltips = CV_RegisterVar{name = "luamenu_tooltips", defaultvalue = "On", PossibleValue = CV_OnOff, flags = CV_SAVE}
+	cv_luamenu_showversion = CV_RegisterVar{name = "luamenu_showversion", defaultvalue = "On", PossibleValue = CV_OnOff, flags = CV_SAVE}
+	cv_luamenu_rounded = CV_RegisterVar{name = "luamenu_rounded", defaultvalue = "1", PossibleValue = {MIN = 0, MAX = FU * 4}, flags = CV_SAVE|CV_FLOAT}
+	cv_luamenu_sliders = CV_RegisterVar{name = "luamenu_sliders", defaultvalue = "On", PossibleValue = CV_OnOff, flags = CV_SAVE}
+end
+
+bg_tint = {color = 31, level = 5}
 
 v = {}
 
@@ -97,7 +103,16 @@ function ScreenToDisplay(x, y)
 -- 	local right = width / 2 + scaled_width / 2
 	local top = height / 2 - scaled_height / 2
 	
-	return FixedMul(x - left, FixedDiv(base_width + left / 2, width)), FixedMul(y - top, FixedDiv(base_height + top / 2, height))
+	return FixedDiv(x - left, FU * dupx), FixedDiv(y - top, FU * dupy)
+-- 	return FixedMul(x - left, FixedDiv(base_width + left / 2, width)), FixedMul(y - top, FixedDiv(base_height + top / 2, height))
+end
+
+function FixedDecimal(str, max)
+	if max == nil then
+		max = 2
+	end
+	
+	return ("%."..max.."f"):format(str) --e.g. "%.4g"
 end
 
 function Menu_SetActive(active)
@@ -134,7 +149,7 @@ end
 
 function Menu_GotoLink(link)
 	if not menus[link] then
-		ShowPopup("Menu_GotoLink", ("Could not find menu link \"%s\".\n\nThis menu may be unimplemented."):format(tostring(link)))
+		ShowPopup("Menu_GotoLink", ("Could not find menu link \"%s\".\n\nSome menus are currently unimplemented."):format(tostring(link)))
 		return
 	end
 
@@ -159,6 +174,9 @@ function Menu_GotoLink(link)
 		menu.exit_anim = FU
 	end
 end
+
+if loaded then return end
+loaded = true
 
 
 local function DrawSpikes(rot, patch, ox, oy, scroll, flags)
@@ -353,6 +371,7 @@ local function Drawer(drawer, player)
 	end
 	
 	v.fadeScreen(0xFF00, 16)
+-- 	v.drawFill(0, 0, 320, 200, (bg_tint.color)|(bg_tint.level << V_ALPHASHIFT))
 	
 	current_menu = $ or "MainMenu"
 	
@@ -375,8 +394,6 @@ local function Drawer(drawer, player)
 	if current_popup then
 		current_popup:draw(FU * 320 / 2, FU * 100 / 2)
 	end
-	
--- 	v.drawScaled(mx, my, FU, cachePatch("M_CURSOR"))
 end
 
 addHook("MenuThinker", function()

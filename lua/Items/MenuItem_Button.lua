@@ -9,7 +9,6 @@ function MenuItem_Button:new(a)
 	a.cvar = $ or nil
 	
 	a.action = $ or nil
-	a.on_draw = $ or nil
 	
 	a.text_label = $ or MenuItem_Text:new{colored = true, align = "right", label = ""}
 	
@@ -18,10 +17,6 @@ end
 
 function MenuItem_Button:draw(x, y)
 	self.super.draw(self, x, y)
-	
-	if self.on_draw then
-		self:on_draw(x, y)
-	end
 	
 	--only designed to be used with left alignment
 	if self.cvar then
@@ -49,7 +44,7 @@ function MenuItem_Button:activate(increment)
 	end
 	
 	if self.cvar then
-		CV_AddValue(self.cvar, increment, true)
+		Banpyura.CV_ForceAddValue(self.cvar, increment)
 	end
 	
 	if self.action then

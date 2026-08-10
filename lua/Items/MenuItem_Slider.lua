@@ -3,13 +3,6 @@ local function get_percent(a, x, y)
 	return FixedDiv(a - x, (y - x) or 1)
 end
 
-local function L_FixedDecimal(str, max)
-	if max == nil then
-		max = 2
-	end
-	
-	return ("%."..max.."f"):format(str) --e.g. "%.4g"
-end
 MenuItem_Slider = MenuItem_Text:inherit()
 
 
@@ -68,7 +61,7 @@ function MenuItem_Slider:draw(x, y)
 				local i = 0
 				
 				while true do
-					local value, strvalue = CV_GetPossibleValue(self.cvar, i)
+					local value, strvalue = Banpyura.CV_GetPossibleValue(self.cvar, i)
 					
 					if strvalue == nil then
 						break
@@ -105,7 +98,7 @@ function MenuItem_Slider:draw(x, y)
 				local value = value
 				
 				if self.cvar.flags & CV_FLOAT then
-					value = L_FixedDecimal(value, 2)
+					value = FixedDecimal(value, 2)
 				end
 				
 				v.drawString(x + FixedMul(self.width, FU / 2), y - FU * 3, value, V_TRANSLUCENT, "thin-fixed-center")
@@ -140,15 +133,11 @@ function MenuItem_Slider:activate(increment)
 		
 		value = min(max($, value_min), value_max)
 		
--- 		local flags = self.cvar.flags
 		if self.cvar.flags & CV_FLOAT then
-			value = L_FixedDecimal(value, 4) --do not use 5
--- 			CV_SetFlags(self.cvar, flags & ~CV_FLOAT)
+			value = FixedDecimal(value, 4)
 		end
 		
-		CV_Set(self.cvar, value, true)
-		
--- 		CV_SetFlags(self.cvar, flags)
+		Banpyura.CV_ForceSet(self.cvar, value)
 	end
 	
 	if self.action then

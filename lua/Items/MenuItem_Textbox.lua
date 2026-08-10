@@ -54,7 +54,7 @@ function MenuItem_Textbox:onKeyInput(key, name)
 -- 	end
 	
 	if self.cvar then
-		CV_Set(self.cvar, self.value, true)
+		Banpyura.CV_ForceSet(self.cvar, self.value)
 	end
 end
 
@@ -62,14 +62,10 @@ function MenuItem_Textbox:onTextInput(text)
 	if text == nil then
 		return true
 	end
--- 	if not input.keyNumPrintable(key.num) then
--- 		return
--- 	end
 	
--- 	print(text.text)
 	self.value = $..text.text
 	
 	if self.cvar then
-		CV_Set(self.cvar, self.value, true)
+		Banpyura.CV_ForceSet(self.cvar, self.value)
 	end
 end

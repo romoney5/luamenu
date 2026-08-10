@@ -318,7 +318,7 @@ local function CL_ConnectToServer()
 end
 
 local function serv_connect(ip, port)
-	menuactive = true
+	_G.menuactive = true
 	Menu_GotoLink("Sonikm")
 	
 	if port == nil then

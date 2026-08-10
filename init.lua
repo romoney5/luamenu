@@ -3,6 +3,8 @@ local directory = { "/",
 	"Class.lua",
 	"Menu.lua",
 	
+	"Preferences.lua",
+	
 	{ "Items",
 		"Menu.lua",
 		"MenuItem.lua",
@@ -26,7 +28,7 @@ local directory = { "/",
 }
 
 --create the luamenu table first, all scripts will operate here
-rawset(_G, "luamenu", {})
+rawset(_G, "luamenu", luamenu or {})
 
 luamenu._G = _G
 luamenu.__index = _G
