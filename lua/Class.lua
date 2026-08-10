@@ -2,7 +2,7 @@
 
 rawset(_G, "MenuClass", {})
 setmetatable(MenuClass, MenuClass)
-registerMetatable(MenuClass) --Listen!
+-- registerMetatable(MenuClass) --Listen!
 
 --did you know: you can use setmetatable freely
 --as long as you register the metatable at script load?
@@ -23,7 +23,7 @@ function MenuClass:inherit()
     a.super = self
     
     setmetatable(a, a)
-    registerMetatable(a) --Listen!
+--     registerMetatable(a) --Listen!
     
     return a
 end
