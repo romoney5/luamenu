@@ -29,7 +29,7 @@ v = {}
 current_menu = "MainMenu"
 current_popup = nil
 
-local next_action
+next_action = nil
 
 local menu_time = 0
 local menu_enter_anim = FU
@@ -114,7 +114,6 @@ function Menu_GotoLink(link)
 		ShowPopup("Menu_GotoLink", ("Could not find menu link \"%s\".\n\nThis menu may be unfinished."):format(tostring(link)))
 		return
 	end
--- 	assert(menus[link], ("Menu_GotoLink: Could not resolve menu link \"%s\"."):format(tostring(link)))
 
 	local old_menu = current_menu
 
@@ -151,7 +150,6 @@ function Menu:new(a)
 	a.dest_scroll = $ or 0
 	a.dest_scroll_origin = $ or 0 --TODO: new class
 	a.dest_scroll_time = $ or 0
-	--destscroll
 	
 	a.width = $ or FU * 320
 	a.height = $ or FU * 200
@@ -305,23 +303,12 @@ function Menu:getYPositionAt(index)
 		if i > 1 then
 			y = $ + item.pre_spacing
 		end
-		
--- 		local align, align_string, factor = item:getAlignment()
--- 		item.align_string = align_string
--- 		item:draw(x + align, y)
 
 		if i == index then
 			return y
 		end
 		
 		local width, height = item:getBounds()
-		
-		--draw the cursor
--- 		if self.selection == i then
--- 			self.cursor_position.x = ease.linear(FU / 3, $, x + align + FixedMul(width, factor) - FU * (24 or 32)) --tied to fps
--- 			self.cursor_position.y = ease.linear(FU / 3, $, y)
--- 			v.drawScaled(self.cursor_position.x, self.cursor_position.y, FU, cachePatch("M_CURSOR"), 0)
--- 		end
 		
 		y = $ + height + item.spacing
 	end
@@ -424,14 +411,6 @@ function MenuItem:getAlignment()
 	return x, align_string, factor
 end
 
--- COM_AddCommand("cmd", function(player, cmd)
--- 	local handle = io.popen(cmd)
--- 	local result = handle:read("*a")
--- 	handle:close()
-
--- 	print(result)
--- end, COM_LOCAL)
-
 function MenuItem:draw()
 	return
 end
@@ -513,6 +492,13 @@ function MenuItem_Text:recalcLayout()
 			table.insert(layout, line)
 			width = 0
 			line = {}
+			
+			continue
+		elseif code & 0x80 then
+			--color code special character
+			
+			table.insert(line, char)
+			table.insert(line, 0)
 			
 			continue
 		elseif parent_width and width > parent_width then --word wrapping
@@ -602,6 +588,20 @@ function MenuItem_Text:draw(x, y)
 		
 		for ii = 1, #line, 2 do
 			local char = line[ii]
+			local code = char:byte()
+			
+			if code & 0x80 then
+				--color code
+				
+				if not (flags & V_CHARCOLORMASK) then
+					local flags2 = ((code & 0x7f) << V_CHARCOLORSHIFT) & V_CHARCOLORMASK
+					
+					col = v.getStringColormap(flags2)
+				end
+				
+				continue
+			end
+			
 			local char_x = x + FixedMul(line[ii + 1], scale) + align_x
 			local char_y = y + (i - 1) * scale * 10
 			
@@ -1218,7 +1218,7 @@ function MenuItem_Popup:draw(x, y)
 	end
 end
 
-local function ShowPopup(title, message, buttons)
+function ShowPopup(title, message, buttons)
 	local popup = MenuItem_Popup:new{title = title, body = message,
 		buttons = {},
 	}

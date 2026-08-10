@@ -6,7 +6,6 @@ setfenv(1, luamenu)
 
 --network stuff is always gonna involve some loading,
 --the user deserves a pretty loading spinner
-local cv_menubgcolor = CV_FindVar("menubgcolor") or {value = 159} --TODO: standardize
 local spinner_time = 0
 local spinner_spin = 0
 

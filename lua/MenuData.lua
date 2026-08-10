@@ -52,9 +52,6 @@ local quit_msgs = {
 }
 
 local function OnQuitGame(self)
--- 	return function()
--- 		COM_BufInsertText(nil, "quit")
--- 	end
 	ShowPopup("Quit Game", quit_msgs[M_RandomRange(1, #quit_msgs)], {
 		{body = "Back", keys = {"n", "escape"}, action = function(self)
 			return true
@@ -260,12 +257,14 @@ menus.MultiplayerMenu_Rejoin = Menu:new{
 			align = "center",
 			level_title_label = MenuItem_Text:new{scale = FU, force_lowercase = true,
 				label = "Previously joined servers will show up here."},
+			
 			on_draw = function(box, x, y, width, height)
 				local padding = FU * 8
 				
 				box.level_title_label.parent_width = width - padding * 2
 				box.level_title_label:draw(x + padding, y + padding - FU)
-			end},
+			end
+		},
 		
 		MenuItem_Button:new{label = "Server browser...", link = "ServerBowser", spacing = FU * 2},
 	},
@@ -286,11 +285,82 @@ menus.OptionsMenu = Menu:new{
 		MenuItem_Button:new{label = "Video Options...", desc = "Change video and display settings", link = "OptionsMenu_Video", spacing = FU * 2},
 		MenuItem_Button:new{label = "Sound Options...", desc = "Change audio settings", link = "OptionsMenu_Sound", spacing = FU * 2 + FU * 10},
 		
-		MenuItem_Button:new{label = "Server Options...", desc = "Change server hosting settings", link = "OptionsMenu_Server", spacing = FU * 2},
-		MenuItem_Button:new{label = "Network Options...", desc = "Change network settings", link = "OptionsMenu_Network", spacing = FU * 2 + FU * 10},
+		MenuItem_Button:new{label = "Server Options...", desc = "Change server hosting settings", link = "OptionsMenu_Server", spacing = FU * 2 + FU * 10},
 		
-		MenuItem_Button:new{label = "Data Options...", desc = "Manage data, screenshots, etc.", link = "OptionsMenu_Data", spacing = FU * 2},
+		MenuItem_Button:new{label = "Data Options...", desc = "Manage data, screenshots, etc.", link = "OptionsMenu_Data", spacing = FU * 2 + FU * 10},
+		
 		MenuItem_Button:new{label = "Menu Options...", desc = "Luamenu-specific settings", link = "OptionsMenu_Luamenu", spacing = FU * 2},
+		MenuItem_Button:new{label = "\x81".."Banpyura Options...", desc = "SRB2 Banpyura-specific settings", link = "OptionsMenu_Banpyura", spacing = FU * 2},
+	},
+}
+
+local function OnOpenGLOptions(self, old_menu)
+	if self.cv_renderer.value == 2 then return end
+	
+	ShowPopup("OpenGL Options", "You are not currently using the OpenGL renderer.\n"
+		.."Switch to the OpenGL renderer for these options to take effect.")
+end
+
+menus.OptionsMenu_Banpyura = Menu:new{
+	anchor = {x = "center", y = "top"},
+	width = FU * 320 - FU * 30 * 2,
+	height = FU * 200 - FU * 20 * 2,
+	title = "BANPYURA OPTIONS",
+	
+	items = {
+		MenuItem_Header:new{label = "Heads-Up Display"},
+		MenuItem_Button:new{label = "Screen Fades", desc = "Enable screen transitions", cvar = CV_FindVar("wipes"), spacing = FU * 2}, --romoney5
+		MenuItem_Button:new{label = "Screen Flashes", desc = "Enable screen flashes", cvar = CV_FindVar("flashes"), spacing = FU * 2},
+		MenuItem_Button:new{label = "Uppercase Menus", desc = "Force uppercase text in menus", cvar = CV_FindVar("menucaps"), spacing = FU * 2}, --banpyura
+		MenuItem_Button:new{label = "Menu Highlight Color", desc = "Change the color of highlighted text", cvar = CV_FindVar("menucolor"), spacing = FU * 2}, --srb2-edit, romoney5
+		MenuItem_Button:new{label = "Menu Background Color", desc = "Change the color of backgrounds", cvar = CV_FindVar("menubgcolor"), spacing = FU * 2}, --banpyura
+		
+		MenuItem_Header:new{label = "Level"},
+-- 		MenuItem_Button:new{label = "Pitch/Roll Object Rotation", desc = "Rotate objects on slopes", cvar = CV_FindVar("pitchroll-tation"), spacing = FU * 2}, --srb2-edit, romoney5
+-- 		MenuItem_Button:new{label = "Ring Racers Screenshakes", desc = "Ring Racers-styled screen shakes", cvar = CV_FindVar("rr_quakes"), spacing = FU * 2}, --srb2-edit, romoney5
+		MenuItem_Button:new{label = "Screenshake Effects", desc = "Enable screen shakes", cvar = CV_FindVar("earthquake"), spacing = FU * 2}, --srb2-edit, romoney5
+		MenuItem_Slider:new{label = "Minimum Brightness", slider_step = 5, desc = "Change minimum sector brightness", cvar = CV_FindVar("r_secbright"), spacing = FU * 2},
+		
+		MenuItem_Header:new{label = "Chat"},
+		MenuItem_Button:new{label = "Horizontal Snap", desc = "Horizontal anchor for the chatbox", cvar = CV_FindVar("chatsnapx"), spacing = FU * 2},
+		MenuItem_Button:new{label = "Vertical Snap", desc = "Vertical anchor for the chatbox", cvar = CV_FindVar("chatsnapy"), spacing = FU * 2},
+		MenuItem_Slider:new{label = "Horizontal Position", desc = "X position for the chatbox", slider_step = 2, cvar = CV_FindVar("chatx"), spacing = FU * 2},
+		MenuItem_Slider:new{label = "Vertical Position", desc = "Y position for the chatbox", slider_step = 2, cvar = CV_FindVar("chaty"), spacing = FU * 2},
+		MenuItem_Button:new{label = "Show Char. Limit", cvar = CV_FindVar("chat_showlimit"), spacing = FU * 2},
+		MenuItem_Button:new{label = "Clear Text on Exit", cvar = CV_FindVar("chat_clearonexit"), spacing = FU * 2},
+		MenuItem_Button:new{label = "Chat Cursor", desc = "Change the style of the chat cursor", cvar = CV_FindVar("chatcursor"), spacing = FU * 2},
+		MenuItem_Slider:new{label = "Chat Opacity", cvar = CV_FindVar("chatopacity"), spacing = FU * 2 + FU * 10},
+		
+		MenuItem_Button:new{label = "OpenGL Options...", desc = "Special OpenGL-related settings", link = new_menu("OptionsMenu_Banpyura_OpenGL", Menu:new{
+			anchor = {x = "center", y = "top"}, width = FU * 320 - FU * 30 * 2, height = FU * 200 - FU * 20 * 2,
+			title = "OPENGL OPTIONS",
+			
+			cv_renderer = CV_FindVar("renderer"),
+
+			on_entry = OnOpenGLOptions,
+			
+			items = {
+				MenuItem_Header:new{label = "'''''''''''''''''''''''''''"},
+				MenuItem_Button:new{label = "Light Dithering", cvar = CV_FindVar("gr_lightdithering"), spacing = FU * 2}, --gks edit
+				MenuItem_Button:new{label = "Render distance", cvar = CV_FindVar("gr_renderdistance"), spacing = FU * 2}, --srb2-edit
+			},
+		}), spacing = FU * 2 + FU * 10},
+		
+		MenuItem_Header:new{label = "General"},
+		MenuItem_Slider:new{label = "Minimum Delay", desc = "Minimum input delay", cvar = CV_FindVar("mindelay"), spacing = FU * 2},
+		MenuItem_Button:new{label = "Gentleman's Delay", desc = "As a host, use the lowest player input delay", cvar = CV_FindVar("gentlemensdelay"), spacing = FU * 2},
+		MenuItem_Slider:new{label = "Connection Timeout", desc = "Tics of lost connection before disconnecting", slider_step = TICRATE, slider_min = 5, slider_max = TICRATE * 20, cvar = CV_FindVar("nettimeout"), spacing = FU * 2},
+		MenuItem_Slider:new{label = "Network Buffer", desc = "Tic buffer; higher amounts increase latency but smoothen gameplay", cvar = CV_FindVar("netticbuffer"), spacing = FU * 2},
+		
+		MenuItem_Header:new{label = "Server Browser"},
+		MenuItem_Slider:new{label = "Server Browser Timeout", slider_min = 1, slider_max = 20, cvar = CV_FindVar("masterserver_timeout"), spacing = FU * 2},
+		
+		MenuItem_Header:new{label = "Connection Screen"},
+		MenuItem_Button:new{label = "Enable Connection Screen", desc = "Show a connection screen before joining a server", cvar = CV_FindVar("showserverinfo"), spacing = FU * 2},
+		MenuItem_Button:new{label = "Return to Server Browser", desc = "Return to the Server Browser after disconnecting", cvar = CV_FindVar("returnfromconnect"), spacing = FU * 2},
+		
+		MenuItem_Header:new{label = "Diagnostic"},
+		MenuItem_Button:new{label = "Network Statistics", desc = "Show misc. network info", cvar = CV_FindVar("netstat"), spacing = FU * 2},
 	},
 }
 
@@ -307,9 +377,9 @@ menus.OptionsMenu_Luamenu = Menu:new{
 		MenuItem_Button:new{label = "Tooltips", desc = "Show short descriptions of menu options at the bottom", cvar = CV_FindVar("luamenu_tooltips"), spacing = FU * 2},
 		
 		MenuItem_Header:new{label = "Personalization"},
-		MenuItem_Button:new{label = "Uppercase Menus", desc = "Force uppercase text in menus", cvar = CV_FindVar("menucaps"), spacing = FU * 2}, --srb2-edit
-		MenuItem_Button:new{label = "Highlight Color", desc = "Change the color of highlighted text", cvar = CV_FindVar("menucolor"), spacing = FU * 2}, --srb2-edit, romoney5
-		MenuItem_Button:new{label = "Background Color", desc = "Change the color of backgrounds", cvar = CV_FindVar("menubgcolor"), spacing = FU * 2}, --gks edit
+-- 		MenuItem_Button:new{label = "Uppercase Menus", desc = "Force uppercase text in menus", cvar = CV_FindVar("menucaps"), spacing = FU * 2}, --srb2-edit
+-- 		MenuItem_Button:new{label = "Highlight Color", desc = "Change the color of highlighted text", cvar = CV_FindVar("menucolor"), spacing = FU * 2}, --srb2-edit, romoney5
+-- 		MenuItem_Button:new{label = "Background Color", desc = "Change the color of backgrounds", cvar = CV_FindVar("menubgcolor"), spacing = FU * 2}, --gks edit
 		MenuItem_Button:new{label = "Stylized Sliders", desc = "Enable rounded sliders", cvar = CV_FindVar("luamenu_sliders"), spacing = FU * 2},
 		MenuItem_Slider:new{label = "Rounded Corners", desc = "Change the size of rounded corners on boxes", slider_step = FU / 4, cvar = CV_FindVar("luamenu_rounded"), spacing = FU * 2},
 		
@@ -438,10 +508,6 @@ menus.OptionsMenu_Video = Menu:new{
 		MenuItem_Button:new{label = "Show Powerups", desc = "Show active powerups at the bottom-right corner", cvar = CV_FindVar("powerupdisplay"), spacing = FU * 2},
 		MenuItem_Button:new{label = "Local Ping Display", desc = "Show ping at the bottom-right corner", cvar = CV_FindVar("showping"), spacing = FU * 2},
 		MenuItem_Button:new{label = "Show Player Names", desc = "Show player names when looking at them", cvar = CV_FindVar("seenames"), spacing = FU * 2},
--- 		MenuItem_Button:new{label = "Uppercase Menus", desc = "Force uppercase text in menus", cvar = CV_FindVar("menucaps"), spacing = FU * 2}, --srb2-edit
--- 		MenuItem_Button:new{label = "Menu Highlight Color", desc = "Change the color of highlighted text", cvar = CV_FindVar("menucolor"), spacing = FU * 2}, --srb2-edit, romoney5
--- 		MenuItem_Button:new{label = "Menu Background Color", desc = "Change the color of backgrounds", cvar = CV_FindVar("menubgcolor"), spacing = FU * 2}, --gks edit
-		MenuItem_Button:new{label = "Screen Fades", desc = "Enable screen transitions", cvar = CV_FindVar("wipes"), spacing = FU * 2}, --romoney5
 		
 		MenuItem_Header:new{label = "Console"},
 		MenuItem_Button:new{label = "Background Color", cvar = CV_FindVar("con_backcolor"), spacing = FU * 2},
@@ -460,11 +526,6 @@ menus.OptionsMenu_Video = Menu:new{
 		MenuItem_Button:new{label = "Draw Distance", desc = "Change render distance of objects", cvar = CV_FindVar("drawdist"), spacing = FU * 2},
 		MenuItem_Button:new{label = "Weather Draw Dist.", cvar = CV_FindVar("drawdist_precip"), spacing = FU * 2},
 		MenuItem_Button:new{label = "NiGHTS Hoop Draw Dist.", cvar = CV_FindVar("drawdist_nights"), spacing = FU * 2},
-		MenuItem_Button:new{label = "Pitch/Roll Object Rotation", desc = "Rotate objects on slopes", cvar = CV_FindVar("pitchroll-tation"), spacing = FU * 2}, --srb2-edit, romoney5
-		MenuItem_Button:new{label = "Ring Racers Screenshakes", desc = "Ring Racers-styled screen shakes", cvar = CV_FindVar("rr_quakes"), spacing = FU * 2}, --srb2-edit, romoney5
-		MenuItem_Button:new{label = "Screenshake Effects", desc = "Enable screen shakes", cvar = CV_FindVar("earthquake"), spacing = FU * 2}, --srb2-edit, romoney5
-		MenuItem_Slider:new{label = "Minimum Brightness", slider_step = 5, desc = "Change minimum sector brightness", cvar = CV_FindVar("r_secbright"), spacing = FU * 2},
-		MenuItem_Button:new{label = "Screen Flashes", desc = "Enable screen flashes", cvar = CV_FindVar("flashes"), spacing = FU * 2},
 		
 		MenuItem_Header:new{label = "Diagnostic"},
 		MenuItem_Button:new{label = "Show FPS", desc = "Show render frames per second", cvar = CV_FindVar("showfps"), spacing = FU * 2},
@@ -487,12 +548,7 @@ menus.OptionsMenu_Video_OpenGL = Menu:new{
 	
 	cv_renderer = CV_FindVar("renderer"),
 	
-	on_entry = function(self, old_menu)
-		if self.cv_renderer.value == 2 then return end
-		
-		ShowPopup("OpenGL Options", "You are not currently using the OpenGL renderer.\n"
-			.."Switch to the OpenGL renderer for these options to take effect.")
-	end,
+	on_entry = OnOpenGLOptions,
 	
 	items = {
 		MenuItem_Header:new{label = "3D Models"},
@@ -503,7 +559,6 @@ menus.OptionsMenu_Video_OpenGL = Menu:new{
 		MenuItem_Header:new{label = "General"},
 		MenuItem_Button:new{label = "Shaders", cvar = CV_FindVar("gr_shaders"), spacing = FU * 2},
 		MenuItem_Button:new{label = "Palette rendering", cvar = CV_FindVar("gr_paletterendering"), spacing = FU * 2},
-		MenuItem_Button:new{label = "Light Dithering", cvar = CV_FindVar("gr_lightdithering"), spacing = FU * 2}, --gks edit
 		MenuItem_Button:new{label = "Lack of perspective", cvar = CV_FindVar("gr_shearing"), spacing = FU * 2},
 		MenuItem_Button:new{label = "Field of view", cvar = CV_FindVar("fov"), spacing = FU * 2},
 		
@@ -511,7 +566,6 @@ menus.OptionsMenu_Video_OpenGL = Menu:new{
 		MenuItem_Button:new{label = "Bit depth", cvar = CV_FindVar("scr_depth"), spacing = FU * 2},
 		MenuItem_Button:new{label = "Texture filter", cvar = CV_FindVar("gr_filtermode"), spacing = FU * 2},
 		MenuItem_Button:new{label = "Anisotropic", cvar = CV_FindVar("gr_anisotropicmode"), spacing = FU * 2},
-		MenuItem_Button:new{label = "Render distance", cvar = CV_FindVar("gr_renderdistance"), spacing = FU * 2}, --srb2-edit
 	},
 }
 
@@ -530,7 +584,7 @@ menus.OptionsMenu_Sound = Menu:new{
 		MenuItem_Slider:new{label = "Digital Music Volume", cvar = CV_FindVar("digmusicvolume"), spacing = FU * 2 + FU * 10},
 		
 		MenuItem_Button:new{label = "MIDI Music", cvar = CV_FindVar("midimusic"), spacing = FU * 2},
-		MenuItem_Slider:new{label = "MIDI Music Volume", cvar = CV_FindVar("midimusicvolume"), spacing = FU * 2 + FU * 10},
+		MenuItem_Slider:new{label = "MIDI Music Volume", desc = "Does not work with Windows native MIDI", cvar = CV_FindVar("midimusicvolume"), spacing = FU * 2 + FU * 10},
 		
 		MenuItem_Button:new{label = "Music Preference", cvar = CV_FindVar("musicpref"), spacing = FU * 2},
 		
@@ -624,31 +678,6 @@ menus.OptionsMenu_Server = Menu:new{
 		MenuItem_Button:new{label = "Maximum File Size", desc = "Max. size of a file the server will send", cvar = CV_FindVar("maxsend"), spacing = FU * 2},
 		
 -- 		MenuItem_Button:new{label = "Advanced", desc = "", link = "OptionsMenu_Server_Advanced", spacing = FU * 2}, --romoney5
-	},
-}
-
-menus.OptionsMenu_Network = Menu:new{
-	anchor = {x = "center", y = "top"},
-	width = FU * 320 - FU * 30 * 2,
-	height = FU * 200 - FU * 20 * 2,
-	title = "NETWORK OPTIONS",
-	
-	items = {
-		MenuItem_Header:new{label = "General"},
-		MenuItem_Slider:new{label = "Minimum Delay", desc = "Minimum input delay", cvar = CV_FindVar("mindelay"), spacing = FU * 2},
-		MenuItem_Button:new{label = "Gentleman's Delay", desc = "As a host, use the lowest player input delay", cvar = CV_FindVar("gentlemensdelay"), spacing = FU * 2},
-		MenuItem_Slider:new{label = "Connection Timeout", desc = "Tics of lost connection before disconnecting", slider_step = TICRATE, slider_min = 5, slider_max = TICRATE * 20, cvar = CV_FindVar("nettimeout"), spacing = FU * 2},
-		MenuItem_Slider:new{label = "Network Buffer", desc = "Tic buffer; higher amounts increase latency but smoothen gameplay", cvar = CV_FindVar("netticbuffer"), spacing = FU * 2},
-		
-		MenuItem_Header:new{label = "Server Browser"},
-		MenuItem_Slider:new{label = "Server Browser Timeout", slider_min = 1, slider_max = 20, cvar = CV_FindVar("masterserver_timeout"), spacing = FU * 2},
-		
-		MenuItem_Header:new{label = "Connection Screen"},
-		MenuItem_Button:new{label = "Enable Connection Screen", desc = "Show a connection screen before joining a server", cvar = CV_FindVar("showserverinfo"), spacing = FU * 2},
-		MenuItem_Button:new{label = "Return to Server Browser", desc = "Return to the Server Browser after disconnecting", cvar = CV_FindVar("returnfromconnect"), spacing = FU * 2},
-		
-		MenuItem_Header:new{label = "Diagnostic"},
-		MenuItem_Button:new{label = "Network Statistics", desc = "Show misc. network info", cvar = CV_FindVar("netstat"), spacing = FU * 2},
 	},
 }
 

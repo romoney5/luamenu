@@ -23,7 +23,7 @@ local function GetSelectedID(self)
 	local rowIndex = 0
 
 	for groupIndex = 1, #self.order do
-		local mapList = self.groups[self.order[groupIndex]]
+		local mapList = self.categories[self.order[groupIndex]]
 		local groupRowCount = ((#mapList - 1) / 3) + 1
 
 		for localRow = 0, groupRowCount - 1 do
@@ -42,7 +42,7 @@ local function draw(self, v)
 	local totalRows = 0
 
 	for i = 1, #self.order do
-		local list = groups[self.order[i]]
+		local list = self.categories[self.order[i]]
 		totalRows = totalRows + ((#list + 2) / 3)
 	end
 	
@@ -57,7 +57,7 @@ local function draw(self, v)
 
 	for i = 1, #self.order do
 		local key = self.order[i]
-		local list = self.groups[key]
+		local list = self.categories[key]
 
 		// zone header
 		local headerY = FU * 75 + FU * yCursor * 80 - scroll
@@ -95,7 +95,7 @@ local function draw(self, v)
 					if info.actnum then
 						v.drawString(x, y + FU * 50, "Act "..info.actnum, act_flags, "fixed")
 					else
-						v.drawString(x, y + FU * 50, "The Act", act_flags, "fixed" or "thin-fixed")
+						v.drawString(x, y + FU * 50, "The Act", act_flags, "thin-fixed")
 					end
 				end
 			end
@@ -112,12 +112,10 @@ menus.LevelSelect = Menu:new{
 	anchor = {x = "center", y = "bottom"},
 	
 	on_entry = function(self, old_menu)
-		--reset to 1 Player on pause and set the cursor instantly
--- 		if old_menu then return end
--- 		self.selection = 1
--- 		self:updateItems()
+		scroll = ease.linear(FU, $, FU * (row - 1) * 80)
+		
 		// rebuild level list
-		self.groups = {}
+		self.categories = {}
 		self.order = {}
 		
 		for i = 0, #mapheaderinfo - 1 do
@@ -127,12 +125,13 @@ menus.LevelSelect = Menu:new{
 			
 			local mapname = info.lvlttl
 
-			if not self.groups[mapname] then
-				self.groups[mapname] = {}
-				self.order[#order + 1] = mapname
+			if not self.categories[mapname] then
+				self.categories[mapname] = {}
+				
+				table.insert(self.order, mapname)
 			end
 
-			self.groups[mapname][#self.groups[mapname] + 1] = i
+			table.insert(self.categories[mapname], i)
 		end
 	end,
 	
@@ -162,17 +161,20 @@ menus.LevelSelect = Menu:new{
 -- 			Menu_GotoLink("SingleplayerMenu_StartGame_CharSelect")
 -- 		end
 		
--- 		if (p.cmd.buttons & BT_JUMP) then
--- 			local id = GetSelectedID(self)
--- 			if id then
--- 				S_StartSound(nil, sfx_menu1, player)
--- 				G_ExitLevel(id, 1)
--- 				levelselectActive = false
--- 			else
--- 				scroll = $+8
--- 				S_StartSound(nil, sfx_s3kb2, player)
--- 			end
--- 		end
+		if name == "enter" then
+			local id = GetSelectedID(self)
+			if id then
+				S_StartSound(nil, sfx_menu1, player)
+				
+				function next_action()
+					Menu_SetActive(false)
+					G_ExitLevel(id, 1)
+				end
+			else
+				scroll = $ + FU * 8
+				S_StartSound(nil, sfx_s3kb2, player)
+			end
+		end
 		
 		return true
 	end,
