@@ -28,12 +28,8 @@ function Menu:new(a)
 	a.anchor = $ or {x = "center", y = "top"}
 	
 	a.selection = $ or 1
-	
 	a.scroll = $ or 0
 	a.scroll_vel = $ or 0
-	a.dest_scroll = $ or 0
-	a.dest_scroll_origin = $ or 0 --TODO: new class
-	a.dest_scroll_time = $ or 0
 	--destscroll
 	
 	a.width = $ or FU * 320
@@ -43,6 +39,8 @@ function Menu:new(a)
 	
 	a.items = $ or {}
 	a.parent = $ or nil
+	
+	a.onEnter = $ or nil
 	
 	--link the items to the menu page
 	for i, item in ipairs(a.items) do
@@ -85,6 +83,8 @@ function Menu:draw()
 	local x, y = self:getPosition()
 	y = $ - self.scroll
 	
+	local total_height = self:getYPositionAt(#self.items + 1)
+	
 	for i, item in ipairs(self.items) do
 		local py = self:getYPositionAt(i)
 		local align, align_string, factor = item:getAlignment()
@@ -98,11 +98,13 @@ function Menu:draw()
 			self.cursor_position.x = ease.linear(FU / 3, $, x + align + FixedMul(width, factor) - FU * (24 or 32)) --tied to fps
 			self.cursor_position.y = ease.linear(FU / 3, $, y + py)
 			v.drawScaled(self.cursor_position.x, self.cursor_position.y, FU, v.cachePatch("M_CURSOR"), 0)
+			
+			if not self.scroll_vel and total_height > self.height then
+				local target = min(max(py - FU * 50, 0), total_height - FU * 150)
+				self.scroll = ease.linear(FU / 3, $, target)
+			end
 		end
 	end
-	
-	self.dest_scroll_time = min($ + FU / 20, FU)
-	self.scroll = ease.outquad(self.dest_scroll_time, self.dest_scroll_origin, self.dest_scroll)
 end
 
 function Menu:getYPositionAt(index)
@@ -174,7 +176,7 @@ function MenuItem:getAlignment()
 	
 	if align == "center" then
 		x = 0
-		align_string = "-center" --TODO: remove
+		align_string = "-center" --TODO: denotated function
 		factor = -FU / 2
 	elseif align == "left" then
 		x = 0 - self.parent.width / 2
@@ -197,10 +199,10 @@ function MenuItem:activate(increment)
 	return
 end
 
---menu text drawer
-local MenuItem_Text = MenuItem:inherit()
+--menu button
+local MenuItem_Button = MenuItem:inherit()
 
-function MenuItem_Text:new(a)
+function MenuItem_Button:new(a)
 	local a = self.super:new(a)
 	setmetatable(a, self)
 	
@@ -210,12 +212,12 @@ function MenuItem_Text:new(a)
 	return a
 end
 
-function MenuItem_Text:getFlags(selected)
+function MenuItem_Button:getFlags(selected)
 	local menucaps = (cv_menucaps and not cv_menucaps.value) and V_ALLOWLOWERCASE or 0
 	local color = 0
 	
 	--use a custom highlight color if available, otherwise use yellow
-	if self.parent and (self.parent.selection == self.index or selected) then
+	if self.parent.selection == self.index or selected then
 		color = V_YELLOWMAP
 		
 		if cv_menucolor then
@@ -226,75 +228,17 @@ function MenuItem_Text:getFlags(selected)
 	return menucaps|color
 end
 
-function MenuItem_Text:getBounds()
-	local width = self._width or 0--FU * v.stringWidth(self.label, self:getFlags(), "normal")
+function MenuItem_Button:getBounds()
+	local width = FU * v.stringWidth(self.label, self:getFlags(), "normal")
 	local height = FU * 8 --inaccurate in some cases
 	
 	return width, height
 end
 
-local function ZeroNumber(str, amount)
-	str = tostring($)
-	
-	if str:len() >= amount
-		return str
-	end
-	
-	return string.rep("0", amount - str:len())..str
-end
-
-function MenuItem_Text:draw(x, y)
--- 	local width, height = self:getBounds()
-	
--- 	v.drawString(x, y, self.label, self:getFlags(), "fixed"..self.align_string) --TODO: alignment option
-
-	local label = self.label
-	local width = 0
-	
-	--run twice; once to calculate the width, once to draw
-	for draw = 0, 1 do
-		width = 0
-		
-		for i = 1, label:len() do
-			local char = label:sub(i, i)
-			local code = char:byte()
-			
-			local patchname = "STCFN"..ZeroNumber(code, 3)
-			
-			if v.patchExists(patchname) then
-				local patch = v.cachePatch(patchname)
-				
-				if draw then
-					v.drawScaled(x + width, y, FU, patch)
-				end
-				
-				width = $ + FU * patch.width
-			else
-				width = $ + FU * 4
-			end
-		end
-		
-		
-	end
-	
-	self._width = width
-end
-
---menu button
-local MenuItem_Button = MenuItem_Text:inherit()
-
-function MenuItem_Button:new(a)
-	local a = self.super:new(a)
-	setmetatable(a, self)
--- 	print(self.label)
-	
-	a.link = $ or nil
-	
-	return a
-end
-
 function MenuItem_Button:draw(x, y)
-	self.super.draw(self, x, y)
+	local width, height = self:getBounds()
+	
+	v.drawString(x, y, self.label, self:getFlags(), "fixed"..self.align_string) --TODO: alignment option
 	
 	--only designed to be used with left alignment
 	if self.cvar then
@@ -309,6 +253,10 @@ function MenuItem_Button:activate(increment)
 		assert(menus[self.link], ("MenuItem_Button:activate: no menu \"%s\""):format(tostring(self.link)))
 		
 		current_menu = self.link
+		
+		if current_menu.onEnter then
+			current_menu:onEnter()
+		end
 	end
 	
 	if self.cvar then
@@ -367,14 +315,52 @@ menus.MainMenu = Menu:new{
 	show_version = true,
 	
 	items = {
-		MenuItem_Button:new{label = "1  Player"},
-		MenuItem_Button:new{label = "Multiplayer"},
+		MenuItem_Button:new{label = "1  Player", link = "SingleplayerMenu"},
+		MenuItem_Button:new{label = "Multiplayer", link = "MultiplayerMenu"},
 		MenuItem_Button:new{label = "Extras"},
 		MenuItem_Button:new{label = "Addons"},
 		MenuItem_Button:new{label = "Options", link = "OptionsMenu"},
 		MenuItem_Button:new{label = "Quit  Game", action = function(self)
 			menus.ep = true
 		end},
+	},
+}
+
+menus.SingleplayerMenu = Menu:new{
+	anchor = {x = "center", y = "bottom"},
+	parent = "MainMenu",
+	
+	items = {
+		MenuItem_Button:new{label = "Start Game", link = "SingleplayerMenu"},
+		MenuItem_Button:new{label = "Record Attack", link = "MultiplayerMenu"},
+		MenuItem_Button:new{label = "NiGHTS Mode"},
+		MenuItem_Button:new{label = "Marathon Run"},
+		MenuItem_Button:new{label = "Tutorial", link = "OptionsMenu"},
+		MenuItem_Button:new{label = "Statistics"},
+	},
+}
+
+--TODO: automatic back parent
+--TODO: left alignment by default
+menus.MultiplayerMenu = Menu:new{
+	anchor = {x = "center", y = "top"},
+	parent = "MainMenu",
+	width = FU * 320 - FU * 30 * 2,
+	height = FU * 200 - FU * 20 * 2,
+	
+	items = {
+		MenuItem_Header:new{label = "Join a game", align = "left"},
+		MenuItem_Button:new{label = "Server browser...", link = "MainMenu", align = "left", spacing = FU * 2},
+		MenuItem_Button:new{label = "Specify server address:", link = "MainMenu", align = "left", spacing = FU * 2},
+		MenuItem_Button:new{label = "Rejoin previous servers...", link = "MainMenu", align = "left", spacing = FU * 2},
+		
+		MenuItem_Header:new{label = "Host a game", align = "left"},
+		MenuItem_Button:new{label = "Internet/LAN...", link = "OptionsMenu_Video", align = "left", spacing = FU * 2},
+		MenuItem_Button:new{label = "Splitscreen...", link = "OptionsMenu_Video", align = "left", spacing = FU * 2},
+		
+		MenuItem_Header:new{label = "Player setup", align = "left"},
+		MenuItem_Button:new{label = "Player 1...", link = "MainMenu", align = "left", spacing = FU * 2},
+		MenuItem_Button:new{label = "Player 2...", link = "MainMenu", align = "left", spacing = FU * 2},
 	},
 }
 
@@ -390,7 +376,6 @@ menus.OptionsMenu = Menu:new{
 		MenuItem_Button:new{label = "Controls per key", cvar = CV_FindVar("controlperkey"), align = "left", spacing = FU * 2 + FU * 10},
 		
 		MenuItem_Button:new{label = "Video Options...", link = "OptionsMenu_Video", align = "left", spacing = FU * 2},
-		MenuItem_Button:new{label = "Network Options...", link = "OptionsMenu_Network", align = "left", spacing = FU * 2},
 		
 		MenuItem_Button:new{label = "Bakc", link = "MainMenu", align = "left"},
 		MenuItem_Button:new{label = "Options", link = "OptionsMenu"},
@@ -460,41 +445,7 @@ menus.OptionsMenu_Video = Menu:new{
 		MenuItem_Header:new{label = "Renderer", align = "left"},
 		MenuItem_Button:new{label = "OpenGL Options...", link = "OptionsMenu_Video", align = "left", spacing = FU * 2},
 		MenuItem_Button:new{label = "FPS Cap", cvar = CV_FindVar("fpscap"), align = "left", spacing = FU * 2},
-		
--- 		MenuItem_Button:new{label = "Bakc", link = "MainMenu", align = "left"},
--- 		MenuItem_Button:new{label = "Options", link = "OptionsMenu"},
--- 		MenuItem_Header:new{label = "What thethe ligma", align = "left"},
--- 		MenuItem_Header:new{label = "What thethe ligma", align = "left"},
--- 		MenuItem_Header:new{label = "What thethe ligma", align = "left"},
--- 		MenuItem_Header:new{label = "What thethe ligma", align = "left"},
--- 		MenuItem_Header:new{label = "What thethe ligma", align = "left"},
--- 		MenuItem_Header:new{label = "What thethe ligma", align = "left"},
--- 		MenuItem_Button:new{label = "Quit  Game"},
-	},
-}
-
-menus.OptionsMenu_Network = Menu:new{
-	anchor = {x = "center", y = "top"},
-	parent = "OptionsMenu",
-	width = FU * 320 - FU * 30 * 2,
-	height = FU * 200 - FU * 20 * 2,
-	
-	items = {
-		MenuItem_Header:new{label = "General", align = "left"},
-		MenuItem_Button:new{label = "Minimum Delay", cvar = CV_FindVar("mindelay"), align = "left", spacing = FU * 2},
-		MenuItem_Button:new{label = "Gentleman's Delay", cvar = CV_FindVar("gentlemensdelay"), align = "left", spacing = FU * 2},
-		MenuItem_Button:new{label = "Connection Timeout", cvar = CV_FindVar("nettimeout"), align = "left", spacing = FU * 2},
-		MenuItem_Button:new{label = "Network Buffer", cvar = CV_FindVar("netticbuffer"), align = "left", spacing = FU * 2},
-		
-		MenuItem_Header:new{label = "Server Browser", align = "left"},
-		MenuItem_Button:new{label = "Timeout", cvar = CV_FindVar("masterserver_timeout"), align = "left", spacing = FU * 2},
-		
-		MenuItem_Header:new{label = "Connection Screen", align = "left"},
-		MenuItem_Button:new{label = "Enable Connection Screen", cvar = CV_FindVar("showserverinfo"), align = "left", spacing = FU * 2},
-		MenuItem_Button:new{label = "Return to Server Browser", cvar = CV_FindVar("returnfromconnect"), align = "left", spacing = FU * 2},
-		
-		MenuItem_Header:new{label = "Diagnostic", align = "left"},
-		MenuItem_Button:new{label = "Network Statistics", cvar = CV_FindVar("netstat"), align = "left", spacing = FU * 2},
+		--
 	},
 }
 
@@ -570,14 +521,6 @@ local function Input(key)
 				break
 			end
 		end
-		
-		local total_height = menu:getYPositionAt(#menu.items + 1)
-		
-		if not menu.scroll_vel and total_height > menu.height then --also make this a function
-			menu.dest_scroll_time = min($ + FU / 20, FU)
-			menu.dest_scroll_origin = menu.scroll
-			menu.dest_scroll = min(max(py - FU * 50, 0), total_height - FU * 150)
-		end
 	end
 	
 	if name == "enter" or name == "left arrow" or name == "right arrow" then
@@ -589,6 +532,22 @@ local function Input(key)
 			end
 		end
 	end
+	
+-- 	if name == "mouse1" then
+-- 		for i, item in ipairs(menu.items) do
+-- 			local width, height = item:getBounds()
+-- 			local y = menu:getYPositionAt(i)
+-- 			if not (my >= y and my < y + height) then continue end
+			
+-- 			if i == menu.selection then
+-- 				item:activate(1)
+-- 			else
+-- 				menu.selection = i
+-- 			end
+			
+-- 			break
+-- 		end
+-- 	end
 end
 
 local mouse_pressed = false
@@ -596,14 +555,7 @@ local mouse_pressed = false
 local function Drawer(drawer, player)
 	if not menuactive then return end
 	
-	--localize drawing functions into a table
-	if v == nil then
-		v = {}
-		
-		for i, fun in pairs(drawer) do
-			v[i] = fun
-		end
-	end
+	v = $ or drawer
 	
 	v.fadeScreen(0xFF00, 16)
 	
@@ -619,7 +571,7 @@ local function Drawer(drawer, player)
 -- 	v.drawString(20, 20, (mx / FU).." "..(my / FU))
 	
 	if (mouse.buttons & MB_BUTTON1) then
-		if not mouse_pressed or true then
+		if not mouse_pressed then
 			local menux, menuy = menu:getPosition()
 			menuy = $ - menu.scroll
 			for i, item in ipairs(menu.items) do
@@ -629,7 +581,7 @@ local function Drawer(drawer, player)
 				if not (my >= y and my < y + height) then continue end
 				
 				if i == menu.selection then
--- 					item:activate(1)
+					item:activate(1)
 				else
 					menu.selection = i
 				end
@@ -648,17 +600,17 @@ local function Drawer(drawer, player)
 	end
 	
 	if (mouse.buttons & MB_SCROLLDOWN) then
-		menu.scroll_vel = $ + FU / 6
+		menu.scroll_vel = $ + FU / 2
 	end
 	
 	if (mouse.buttons & MB_SCROLLUP) then
-		menu.scroll_vel = $ - FU / 6
+		menu.scroll_vel = $ - FU / 2
 	end
 	
 	--TODO:
 	
 	menu.scroll = $ + menu.scroll_vel
-	menu.scroll_vel = max(abs($) - FU / 32, 0) * ($ < 0 and -1 or 1)
+	menu.scroll_vel = max(abs($) - FU / 16, 0) * ($ < 0 and -1 or 1)
 	
 	local speed = FU / TICRATE / 2
 	DrawSpikes(ANG1 * 10, 0, FU * 155, (leveltime * speed + menu.scroll / 64) % FU, V_SNAPTOBOTTOM)
