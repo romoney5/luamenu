@@ -106,6 +106,8 @@ local function draw(self, v)
 	v.drawScaled(FU * 20 + FU * 100 * (xSel - 1), FU * 75 + FU * 80 * (row - 1) - scroll, FU / 2, v.cachePatch(patch))
 end
 
+Menu_LevelSelect = Menu:inherit()
+
 menus.LevelSelect = Menu:new{
 	anchor = {x = "center", y = "bottom"},
 	
