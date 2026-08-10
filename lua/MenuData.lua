@@ -8,38 +8,55 @@ local function new_menu(name, data)
 	return name
 end
 
+local quit_msgs = {
+	"Eggman's tied explosives\nto your girlfriend, and\nwill activate them if\nyou press the 'Y' key!\nPress 'N' to save her!",
+	"What would Tails say if\nhe saw you quitting the game?",
+	"Hey!\nWhere do ya think you're goin'?",
+	"Forget your studies!\nPlay some more!",
+	"You're trying to say you\nlike Sonic 2K6 better than\nthis, right?",
+	"Don't leave yet -- there's a\nsuper emerald around that corner!",
+	"You'd rather work than play?",
+	"Go ahead and leave. See if I care...\n*sniffle*",
+	
+	"If you leave now,\nEggman will take over the world!",
+	"Don't quit!\nThere are animals\nto save!",
+	"Aw c'mon, just bop\na few more robots!",
+	"Did you get all those Chaos Emeralds?", --mno
+	"If you leave, I'll use\nmy spin attack on you!",
+	"Don't go!\nYou might find the hidden\nlevels!",
+	"Hit the 'N' key, Sonic!\nThe 'N' key!",
+	
+	"Are you really going to give up?\nWe certainly would never give you up.",
+	"Come on, just ONE more netgame!",
+	"Press 'N' to unlock\nthe Ultimate Cheat!",
+	"Why don't you go back and try\njumping on that house to\nsee what happens?",
+	"Every time you press 'Y', an\nSRB2 Developer cries...",
+	"You'll be back to play soon, though...\n......right?",
+	"Aww, is Egg Rock Zone too\ndifficult for you?",
+}
+
+local function OnQuitGame(self)
+-- 	return function()
+-- 		COM_BufInsertText(nil, "quit")
+-- 	end
+	ShowPopup("Quit Game", quit_msgs[M_RandomRange(1, #quit_msgs)], {
+		{body = "Back", keys = {"n", "escape"}, action = function(self)
+			return true
+		end},
+		{body = "Quit", keys = {"y", "enter"}, action = function(self)
+			return function()
+				Menu_SetActive(false)
+				COM_BufInsertText(nil, "quit")
+			end
+		end},
+	})
+end
+
 --title screen menu
 
 menus.MainMenu = Menu:new{
 	anchor = {x = "center", y = "bottom"},
 	show_version = true,
-	
-	quit_msgs = {
-		"Eggman's tied explosives\nto your girlfriend, and\nwill activate them if\nyou press the 'Y' key!\nPress 'N' to save her!",
-		"What would Tails say if\nhe saw you quitting the game?",
-		"Hey!\nWhere do ya think you're goin'?",
-		"Forget your studies!\nPlay some more!",
-		"You're trying to say you\nlike Sonic 2K6 better than\nthis, right?",
-		"Don't leave yet -- there's a\nsuper emerald around that corner!",
-		"You'd rather work than play?",
-		"Go ahead and leave. See if I care...\n*sniffle*",
-		
-		"If you leave now,\nEggman will take over the world!",
-		"Don't quit!\nThere are animals\nto save!",
-		"Aw c'mon, just bop\na few more robots!",
-		"Did you get all those Chaos Emeralds?", --mno
-		"If you leave, I'll use\nmy spin attack on you!",
-		"Don't go!\nYou might find the hidden\nlevels!",
-		"Hit the 'N' key, Sonic!\nThe 'N' key!",
-		
-		"Are you really going to give up?\nWe certainly would never give you up.",
-		"Come on, just ONE more netgame!",
-		"Press 'N' to unlock\nthe Ultimate Cheat!",
-		"Why don't you go back and try\njumping on that house to\nsee what happens?",
-		"Every time you press 'Y', an\nSRB2 Developer cries...",
-		"You'll be back to play soon, though...\n......right?",
-		"Aww, is Egg Rock Zone too\ndifficult for you?",
-	},
 	
 	items = {
 		MenuItem_Button:new{label = "1  Player", align = "center", link = "SingleplayerMenu"},
@@ -47,22 +64,7 @@ menus.MainMenu = Menu:new{
 		MenuItem_Button:new{label = "Extras", align = "center", link = "ExtrasMenu"},
 		MenuItem_Button:new{label = "Addons", align = "center", link = "AddonsMenu"},
 		MenuItem_Button:new{label = "Options", align = "center", link = "OptionsMenu"},
-		MenuItem_Button:new{label = "Quit  Game", align = "center", action = function(self)
-			local quit_msgs = self.parent.quit_msgs
--- 			return function()
--- 				COM_BufInsertText(nil, "quit")
--- 			end
-			ShowPopup("Quit Game", quit_msgs[M_RandomRange(1, #quit_msgs)], {
-				{body = "Back", keys = {"n", "escape"}, action = function(self)
-					return true
-				end},
-				{body = "Quit", keys = {"y", "enter"}, action = function(self)
-					return function()
-						COM_BufInsertText(nil, "quit")
-					end
-				end},
-			})
-		end},
+		MenuItem_Button:new{label = "Quit  Game", align = "center", action = OnQuitGame},
 	},
 }
 
@@ -204,7 +206,9 @@ menus.MultiplayerMenu = Menu:new{
 	items = {
 		MenuItem_Header:new{label = "Join a game"},
 		MenuItem_Button:new{label = "Server browser...", link = "ServerBowser", spacing = FU * 2},
-		MenuItem_Button:new{label = "Specify server address:", link = "ServerConnection", spacing = FU * 2}, --action
+		MenuItem_Textbox:new{label = "Specify server address:", action = function(self)
+			serv_connect(self.value)
+		end, spacing = FU * 2}, --action
 		MenuItem_Button:new{label = "Rejoin previous servers...", link = "MultiplayerMenu_Rejoin", spacing = FU * 2}, --srb2-edit
 		
 		MenuItem_Header:new{label = "Host a game"},
@@ -251,9 +255,21 @@ menus.OptionsMenu_Luamenu = Menu:new{
 		MenuItem_Button:new{label = "Background Decorations", desc = "Show visual decorations in the background", cvar = CV_FindVar("luamenu_bgdecos"), spacing = FU * 2},
 		MenuItem_Button:new{label = "Animations", desc = "Enable animations when entering pages, hovering, etc.", cvar = CV_FindVar("luamenu_anims"), spacing = FU * 2},
 		MenuItem_Button:new{label = "Tooltips", desc = "Show short descriptions of menu options at the bottom", cvar = CV_FindVar("luamenu_tooltips"), spacing = FU * 2},
-		MenuItem_Slider:new{label = "Rounded Corners", desc = "Enable rounded corners on boxes", cvar = CV_FindVar("luamenu_rounded"), spacing = FU * 2},
+		MenuItem_Slider:new{label = "Rounded Corners", desc = "Enable rounded corners on boxes", slider_step = FU / 4, cvar = CV_FindVar("luamenu_rounded"), spacing = FU * 2},
 	},
 }
+
+--[[menus.OptionsMenu_Luamenu = Menu:new{
+	anchor = {x = "center", y = "top"},
+	width = FU * 320 - FU * 30 * 2,
+	height = FU * 200 - FU * 20 * 2,
+	title = "XDF",
+	
+	items = {
+		MenuItem_Header:new{label = "Xdf"},
+		MenuItem_Button:new{label = "Xdf", desc = "Xdf", cvar = CV_RegisterVar{name = "xdf", defaultvalue = "Xdf"}, spacing = FU * 2},
+	},
+}]]
 
 menus.OptionsMenu_P1Controls = Menu:new{
 	anchor = {x = "center", y = "top"},
@@ -284,8 +300,8 @@ menus.OptionsMenu_P1Controls = Menu:new{
 				MenuItem_Button:new{label = "Third-Person MouseLook", desc = "Enable looking up/down in third person", cvar = CV_FindVar("chasemlook"), spacing = FU * 2},
 				MenuItem_Button:new{label = "Mouse Move", desc = "Use the mouse to move the character", cvar = CV_FindVar("mousemove"), spacing = FU * 2},
 				MenuItem_Button:new{label = "Invert Y Axis", desc = "Invert vertical mouse movement", cvar = CV_FindVar("invertmouse"), spacing = FU * 2},
-				MenuItem_Button:new{label = "Mouse X Sensitivity", desc = "Change horizontal mouse sensitivity", cvar = CV_FindVar("mousesens"), spacing = FU * 2},
-				MenuItem_Button:new{label = "Mouse Y Sensitivity", desc = "Change vertical mouse sensitivity", cvar = CV_FindVar("mouseysens"), spacing = FU * 2 + FU * 10},
+				MenuItem_Slider:new{label = "Mouse X Sensitivity", slider_step = 2, desc = "Change horizontal mouse sensitivity", cvar = CV_FindVar("mousesens"), spacing = FU * 2},
+				MenuItem_Slider:new{label = "Mouse Y Sensitivity", slider_step = 2, desc = "Change vertical mouse sensitivity", cvar = CV_FindVar("mouseysens"), spacing = FU * 2 + FU * 10},
 			},
 		}), spacing = FU * 2},
 		MenuItem_Button:new{label = "Gamepad Options...", desc = "Change controller settings", link = "a", spacing = FU * 2 + FU * 10},
@@ -304,8 +320,8 @@ menus.OptionsMenu_P1Controls = Menu:new{
 				MenuItem_Header:new{label = "Camera Positioning"},
 				MenuItem_Button:new{label = "Camera Distance", desc = "Change the distance of third-person camera", cvar = CV_FindVar("cam_dist"), spacing = FU * 2},
 				MenuItem_Button:new{label = "Camera Height", desc = "Change the height of third-person camera", cvar = CV_FindVar("cam_height"), spacing = FU * 2},
-				MenuItem_Button:new{label = "Camera Spacial Speed", desc = "Change the following speed of third-person camera", cvar = CV_FindVar("cam_speed"), spacing = FU * 2},
-				MenuItem_Button:new{label = "Rotation Speed", desc = "Change the speed of left/right arrow keys", cvar = CV_FindVar("cam_turnmultiplier"), spacing = FU * 2},
+				MenuItem_Slider:new{label = "Camera Spacial Speed", desc = "Change the following speed of third-person camera", cvar = CV_FindVar("cam_speed"), spacing = FU * 2},
+				MenuItem_Slider:new{label = "Rotation Speed", desc = "Change the speed of left/right arrow keys", cvar = CV_FindVar("cam_turnmultiplier"), spacing = FU * 2},
 				
 				MenuItem_Header:new{label = "Display Options"},
 				MenuItem_Button:new{label = "Crosshair", desc = "Show a crosshair at the center in first-person", cvar = CV_FindVar("crosshair"), spacing = FU * 2},
@@ -336,13 +352,13 @@ menus.OptionsMenu_Video = Menu:new{
 		MenuItem_Button:new{label = "Renderer (F10)", desc = "Switch the game's renderer", cvar = CV_FindVar("renderer"), spacing = FU * 2},
 		
 		MenuItem_Header:new{label = "Color Profile"},
-		MenuItem_Button:new{label = "Brightness", cvar = CV_FindVar("gamma"), spacing = FU * 2},
-		MenuItem_Button:new{label = "Saturation", cvar = CV_FindVar("saturation"), spacing = FU * 2},
+		MenuItem_Slider:new{label = "Brightness", cvar = CV_FindVar("gamma"), spacing = FU * 2},
+		MenuItem_Slider:new{label = "Saturation", cvar = CV_FindVar("saturation"), spacing = FU * 2},
 		MenuItem_Button:new{label = "Advanced Settings...", desc = "Advanced color settings", link = "OptionsMenu_Video_Color", spacing = FU * 2},
 		
 		MenuItem_Header:new{label = "Heads-Up Display"},
 		MenuItem_Button:new{label = "Show HUD", cvar = CV_FindVar("showhud"), spacing = FU * 2},
-		MenuItem_Button:new{label = "HUD Transparency", cvar = CV_FindVar("translucenthud"), spacing = FU * 2},
+		MenuItem_Slider:new{label = "HUD Transparency", cvar = CV_FindVar("translucenthud"), spacing = FU * 2},
 		MenuItem_Button:new{label = "Score/Time/Rings", desc = "Change the timer's style", cvar = CV_FindVar("timerres"), spacing = FU * 2},
 		MenuItem_Button:new{label = "Show Powerups", desc = "Show active powerups at the bottom-right corner", cvar = CV_FindVar("powerupdisplay"), spacing = FU * 2},
 		MenuItem_Button:new{label = "Local Ping Display", desc = "Show ping at the bottom-right corner", cvar = CV_FindVar("showping"), spacing = FU * 2},
@@ -358,8 +374,8 @@ menus.OptionsMenu_Video = Menu:new{
 		
 		MenuItem_Header:new{label = "Chat"},
 		MenuItem_Button:new{label = "Chat Mode", cvar = CV_FindVar("chatmode"), spacing = FU * 2},
-		MenuItem_Button:new{label = "Chat Box Width", cvar = CV_FindVar("chatwidth"), spacing = FU * 2},
-		MenuItem_Button:new{label = "Chat Box Height", cvar = CV_FindVar("chatheight"), spacing = FU * 2},
+		MenuItem_Slider:new{label = "Chat Box Width", slider_step = 5, cvar = CV_FindVar("chatwidth"), spacing = FU * 2},
+		MenuItem_Slider:new{label = "Chat Box Height", cvar = CV_FindVar("chatheight"), spacing = FU * 2},
 		MenuItem_Button:new{label = "Message Fadeout Time", cvar = CV_FindVar("chattime"), spacing = FU * 2},
 		MenuItem_Button:new{label = "Chat Notifications", desc = "Enable chat sounds", cvar = CV_FindVar("chatnotifications"), spacing = FU * 2},
 		MenuItem_Button:new{label = "Spam Protection", desc = "Block spammed chat messages", cvar = CV_FindVar("chatspamprotection"), spacing = FU * 2},
@@ -372,7 +388,7 @@ menus.OptionsMenu_Video = Menu:new{
 		MenuItem_Button:new{label = "Pitch/Roll Object Rotation", desc = "Rotate objects on slopes", cvar = CV_FindVar("pitchroll-tation"), spacing = FU * 2}, --srb2-edit, romoney5
 		MenuItem_Button:new{label = "Ring Racers Screenshakes", desc = "Ring Racers-styled screen shakes", cvar = CV_FindVar("rr_quakes"), spacing = FU * 2}, --srb2-edit, romoney5
 		MenuItem_Button:new{label = "Screenshake Effects", desc = "Enable screen shakes", cvar = CV_FindVar("earthquake"), spacing = FU * 2}, --srb2-edit, romoney5
-		MenuItem_Button:new{label = "Minimum Brightness", desc = "Change minimum sector brightness", cvar = CV_FindVar("fullbrite"), spacing = FU * 2},
+		MenuItem_Slider:new{label = "Minimum Brightness", slider_step = 5, desc = "Change minimum sector brightness", cvar = CV_FindVar("r_secbright"), spacing = FU * 2},
 		MenuItem_Button:new{label = "Screen Flashes", desc = "Enable screen flashes", cvar = CV_FindVar("flashes"), spacing = FU * 2},
 		
 		MenuItem_Header:new{label = "Diagnostic"},
@@ -424,13 +440,13 @@ menus.OptionsMenu_Sound = Menu:new{
 	items = {
 		MenuItem_Header:new{label = "Game Audio"},
 		MenuItem_Button:new{label = "Sound Effects", cvar = CV_FindVar("sounds"), spacing = FU * 2},
-		MenuItem_Button:new{label = "Sound Volume", cvar = CV_FindVar("soundvolume"), spacing = FU * 2 + FU * 10},
+		MenuItem_Slider:new{label = "Sound Volume", cvar = CV_FindVar("soundvolume"), spacing = FU * 2 + FU * 10},
 		
 		MenuItem_Button:new{label = "Digital Music", cvar = CV_FindVar("digimusic"), spacing = FU * 2},
-		MenuItem_Button:new{label = "Digital Music Volume", cvar = CV_FindVar("digmusicvolume"), spacing = FU * 2 + FU * 10},
+		MenuItem_Slider:new{label = "Digital Music Volume", cvar = CV_FindVar("digmusicvolume"), spacing = FU * 2 + FU * 10},
 		
 		MenuItem_Button:new{label = "MIDI Music", cvar = CV_FindVar("midimusic"), spacing = FU * 2},
-		MenuItem_Button:new{label = "MIDI Music Volume", cvar = CV_FindVar("midimusicvolume"), spacing = FU * 2 + FU * 10},
+		MenuItem_Slider:new{label = "MIDI Music Volume", cvar = CV_FindVar("midimusicvolume"), spacing = FU * 2 + FU * 10},
 		
 		MenuItem_Button:new{label = "Music Preference", cvar = CV_FindVar("musicpref"), spacing = FU * 2},
 		
@@ -443,6 +459,63 @@ menus.OptionsMenu_Sound = Menu:new{
 	},
 }
 
+menus.OptionsMenu_Server = Menu:new{
+	anchor = {x = "center", y = "top"},
+	width = FU * 320 - FU * 30 * 2,
+	height = FU * 200 - FU * 20 * 2,
+	title = "SERVER OPTIONS",
+	
+	items = {
+		MenuItem_Header:new{label = "General"},
+		MenuItem_Textbox:new{label = "Server name", desc = "", cvar = CV_FindVar("servername"), spacing = FU * 2},
+		MenuItem_Button:new{label = "Max Players", desc = "", cvar = CV_FindVar("maxplayers"), spacing = FU * 2},
+		MenuItem_Button:new{label = "Allow Add-on Downloading", desc = "", cvar = CV_FindVar("downloading"), spacing = FU * 2},
+		MenuItem_Button:new{label = "Allow players to join", desc = "", cvar = CV_FindVar("allowjoin"), spacing = FU * 2},
+		MenuItem_Button:new{label = "Minutes for reconnecting", desc = "", cvar = CV_FindVar("rejointimeout"), spacing = FU * 2},
+		MenuItem_Button:new{label = "Map progression", desc = "", cvar = CV_FindVar("advancemap"), spacing = FU * 2},
+		MenuItem_Button:new{label = "Intermission Timer", desc = "", cvar = CV_FindVar("inttime"), spacing = FU * 2},
+		
+		MenuItem_Header:new{label = "Characters"},
+		MenuItem_Button:new{label = "Force a character", desc = "", cvar = CV_FindVar("forceskin"), spacing = FU * 2},
+		MenuItem_Button:new{label = "Restrict character changes", desc = "", cvar = CV_FindVar("restrictskinchange"), spacing = FU * 2},
+		
+		MenuItem_Header:new{label = "Items"},
+		MenuItem_Button:new{label = "Item respawn delay", desc = "", cvar = CV_FindVar("respawnitemtime"), spacing = FU * 2},
+		MenuItem_Button:new{label = "Mystery Item Monitor Toggles...", desc = "", link = "OptionsMenu_Server_Monitors", spacing = FU * 2},
+		
+		MenuItem_Header:new{label = "Cooperative"},
+		MenuItem_Button:new{label = "Players required for exit", desc = "", cvar = CV_FindVar("playersforexit"), spacing = FU * 2},
+		MenuItem_Button:new{label = "Starposts", desc = "", cvar = CV_FindVar("coopstarposts"), spacing = FU * 2},
+		MenuItem_Button:new{label = "Life sharing", desc = "", cvar = CV_FindVar("cooplives"), spacing = FU * 2},
+		MenuItem_Button:new{label = "Post-goal free roaming", desc = "", cvar = CV_FindVar("exitmove"), spacing = FU * 2},
+		
+		MenuItem_Header:new{label = "Race, Competition"},
+		MenuItem_Button:new{label = "Level completion countdown", desc = "", cvar = CV_FindVar("countdowntime"), spacing = FU * 2},
+		MenuItem_Button:new{label = "Item Monitors", desc = "", cvar = CV_FindVar("competitionboxes"), spacing = FU * 2},
+		
+		MenuItem_Header:new{label = "Ringslinger (Match, CTF, Tag, H&S)"},
+		MenuItem_Button:new{label = "Time Limit", desc = "", cvar = CV_FindVar("timelimit"), spacing = FU * 2},
+		MenuItem_Button:new{label = "Score Limit", desc = "", cvar = CV_FindVar("pointlimit"), spacing = FU * 2},
+		MenuItem_Button:new{label = "Overtime on Tie", desc = "", cvar = CV_FindVar("overtime"), spacing = FU * 2},
+		MenuItem_Button:new{label = "Player respawn delay", desc = "", cvar = CV_FindVar("respawndelay"), spacing = FU * 2},
+		
+		MenuItem_Header:new{label = "Teams"},
+		MenuItem_Button:new{label = "Autobalance sizes", desc = "", cvar = CV_FindVar("autobalance"), spacing = FU * 2},
+		MenuItem_Button:new{label = "Scramble on Map Change", desc = "", cvar = CV_FindVar("scrambleonchange"), spacing = FU * 2},
+		
+		MenuItem_Header:new{label = "Advanced"},
+		MenuItem_Textbox:new{label = "Master server", desc = "", cvar = CV_FindVar("masterserver"), spacing = FU * 2},
+		MenuItem_Button:new{label = "Join delay", desc = "", cvar = CV_FindVar("joindelay"), spacing = FU * 2},
+		MenuItem_Button:new{label = "Attempts to resynchronise", desc = "", cvar = CV_FindVar("resynchattempts"), spacing = FU * 2},
+		MenuItem_Button:new{label = "Show IP Address of Joiners", desc = "", cvar = CV_FindVar("showjoinaddress"), spacing = FU * 2},
+		--romoney5
+		MenuItem_Button:new{label = "Download Speed", desc = "", cvar = CV_FindVar("downloadspeed"), spacing = FU * 2},
+		MenuItem_Button:new{label = "Maximum File Size", desc = "", cvar = CV_FindVar("maxsend"), spacing = FU * 2},
+		
+-- 		MenuItem_Button:new{label = "Advanced", desc = "", link = "OptionsMenu_Server_Advanced", spacing = FU * 2}, --romoney5
+	},
+}
+
 menus.OptionsMenu_Network = Menu:new{
 	anchor = {x = "center", y = "top"},
 	width = FU * 320 - FU * 30 * 2,
@@ -451,13 +524,13 @@ menus.OptionsMenu_Network = Menu:new{
 	
 	items = {
 		MenuItem_Header:new{label = "General"},
-		MenuItem_Button:new{label = "Minimum Delay", cvar = CV_FindVar("mindelay"), spacing = FU * 2},
+		MenuItem_Slider:new{label = "Minimum Delay", cvar = CV_FindVar("mindelay"), spacing = FU * 2},
 		MenuItem_Button:new{label = "Gentleman's Delay", cvar = CV_FindVar("gentlemensdelay"), spacing = FU * 2},
-		MenuItem_Button:new{label = "Connection Timeout", cvar = CV_FindVar("nettimeout"), spacing = FU * 2},
-		MenuItem_Button:new{label = "Network Buffer", cvar = CV_FindVar("netticbuffer"), spacing = FU * 2},
+		MenuItem_Slider:new{label = "Connection Timeout", slider_step = TICRATE, slider_min = 5, slider_max = TICRATE * 20, cvar = CV_FindVar("nettimeout"), spacing = FU * 2},
+		MenuItem_Slider:new{label = "Network Buffer", cvar = CV_FindVar("netticbuffer"), spacing = FU * 2},
 		
 		MenuItem_Header:new{label = "Server Browser"},
-		MenuItem_Button:new{label = "Timeout", cvar = CV_FindVar("masterserver_timeout"), spacing = FU * 2},
+		MenuItem_Slider:new{label = "Server Browser Timeout", slider_min = 1, slider_max = 20, cvar = CV_FindVar("masterserver_timeout"), spacing = FU * 2},
 		
 		MenuItem_Header:new{label = "Connection Screen"},
 		MenuItem_Button:new{label = "Enable Connection Screen", cvar = CV_FindVar("showserverinfo"), spacing = FU * 2},
@@ -469,6 +542,34 @@ menus.OptionsMenu_Network = Menu:new{
 }
 
 --singleplayer esc menu
+
+local function OnReturnToTitle(self)
+	ShowPopup("Return to Title", "Return to the title screen?", {
+		{body = "Back", keys = {"n", "escape"}, action = function(self)
+			return true
+		end},
+		{body = "OK", keys = {"y", "enter"}, action = function(self)
+			return function()
+				Menu_SetActive(false)
+				COM_BufInsertText(nil, "exitgame")
+			end
+		end},
+	})
+end
+
+local function OnRetry(self)
+	ShowPopup("Retry", "Retry the level from the last checkpoint?", {
+		{body = "Back", keys = {"n", "escape"}, action = function(self)
+			return true
+		end},
+		{body = "Retry", keys = {"y", "enter"}, action = function(self)
+			return function()
+				Menu_SetActive(false)
+				COM_BufInsertText(nil, "retry")
+			end
+		end},
+	})
+end
 
 menus.SP_MainMenu = Menu:new{
 	anchor = {x = "center", y = "center"},
@@ -502,24 +603,10 @@ menus.SP_MainMenu = Menu:new{
 		MenuItem_Button:new{label = "Level Select...", link = "LevelSelect", spacing = FU * 8},
 		
 		MenuItem_Button:new{label = "Continue", link = ""},
-		MenuItem_Button:new{label = "Retry", action = function(self)
-			return function()
-				COM_BufInsertText(nil, "retry")
-				return false
-			end
-		end},
+		MenuItem_Button:new{label = "Retry", action = OnRetry},
 		MenuItem_Button:new{label = "Options", link = "OptionsMenu", spacing = FU * 8},
 		
-		MenuItem_Button:new{label = "Return to Title", action = function(self)
-			return function()
-				COM_BufInsertText(nil, "exitgame")
-				return false
-			end
-		end},
-		MenuItem_Button:new{label = "Quit Game", action = function(self)
-			return function()
-				COM_BufInsertText(nil, "quit")
-			end
-		end},
+		MenuItem_Button:new{label = "Return to Title", action = OnReturnToTitle},
+		MenuItem_Button:new{label = "Quit Game", action = OnQuitGame},
 	},
 }

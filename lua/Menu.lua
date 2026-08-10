@@ -4,6 +4,10 @@
 if not gks_luamenu_supported then return end
 gks_luamenu = true
 
+local cv_luamenu = CV_RegisterVar{name = "luamenu", defaultvalue = "On", PossibleValue = CV_OnOff, flags = CV_SAVE|CV_CALL, func = function(self)
+	gks_luamenu = self.value and true or false
+end}
+
 local menus = {}
 
 local cv_menucaps = CV_FindVar("menucaps") or {value = 1}
@@ -13,7 +17,7 @@ local cv_menubgcolor = CV_FindVar("menubgcolor") or {value = 159}
 local cv_luamenu_bgdecos = CV_RegisterVar{name = "luamenu_bgdecos", defaultvalue = "On", PossibleValue = CV_OnOff, flags = CV_SAVE}
 local cv_luamenu_anims = CV_RegisterVar{name = "luamenu_anims", defaultvalue = "On", PossibleValue = CV_OnOff, flags = CV_SAVE}
 local cv_luamenu_tooltips = CV_RegisterVar{name = "luamenu_tooltips", defaultvalue = "On", PossibleValue = CV_OnOff, flags = CV_SAVE}
-local cv_luamenu_rounded = CV_RegisterVar{name = "luamenu_rounded", defaultvalue = "1", PossibleValue = {MIN = 0, MAX = FU * 3}, flags = CV_SAVE|CV_FLOAT}
+local cv_luamenu_rounded = CV_RegisterVar{name = "luamenu_rounded", defaultvalue = "1", PossibleValue = {MIN = 0, MAX = FU * 4}, flags = CV_SAVE|CV_FLOAT}
 
 local v = {}
 
@@ -89,6 +93,8 @@ local function SetActive(active)
 	else
 		input.setMouseGrab(true)
 		menuactive = false
+		current_menu = nil
+		current_popup = nil
 		
 		if JNI_SetTouchVisible then
 			JNI_SetTouchVisible(true)
@@ -99,6 +105,7 @@ local function SetActive(active)
 	menu_enter_anim = FU
 	menu_exit_anim = FU
 end
+rawset(_G, "Menu_SetActive", SetActive)
 
 local function Menu_GotoLink(link)
 	if not menus[link] then
@@ -403,6 +410,7 @@ function MenuItem:getAlignment()
 		factor = -FU / 2
 	elseif align == "left" then
 		x = 0 - parent_width / 2
+-- 		x = width / 2
 		align_string = ""
 		factor = 0
 	elseif align == "right" then
@@ -656,7 +664,7 @@ function MenuItem_Button:activate(increment)
 	end
 end
 
---menu button
+--menu slider
 local MenuItem_Slider = MenuItem_Text:inherit()
 rawset(_G, "MenuItem_Slider", MenuItem_Slider)
 
@@ -669,11 +677,38 @@ function MenuItem_Slider:new(a)
 	
 	a.cvar = $ or nil
 	
+	a.slider_step = $ or 1
+	
+	a.slider_min = $ or nil
+	a.slider_max = $ or nil
+	
 	return a
 end
 
 local function get_percent(a, x, y)
 	return FixedDiv(a - x, (y - x) or 1)
+end
+
+local function L_FixedDecimal(str, maxdecimal)
+	if str == nil or tostring(str) == nil then
+		return '1'
+	end
+	local number = tonumber(str)
+	maxdecimal = ($ ~= nil) and $ or 2
+	if tonumber(str) == 0 then return '0' end
+	local polarity = abs(number)/number
+	local str_polarity = (polarity < 0) and '-' or ''
+	local str_whole = tostring(abs(number/FRACUNIT))
+	if maxdecimal == 0 then
+		return str_polarity..str_whole
+	end
+	local decimal = number%FRACUNIT
+	decimal = FRACUNIT + $
+	decimal = FixedMul($,FRACUNIT*10^maxdecimal)
+	decimal = $>>FRACBITS
+	local str_decimal = string.sub(decimal,2)
+	if str_decimal == string.rep("0",maxdecimal) then str_decimal = "" else str_decimal = "."..$ end
+	return str_polarity..str_whole..str_decimal
 end
 
 function MenuItem_Slider:draw(x, y)
@@ -693,9 +728,173 @@ function MenuItem_Slider:draw(x, y)
 		v.drawScaled(x + self.width, y, scale, side, V_FLIP)
 		
 		local value = self.cvar.value
--- 		local value_min = self.cvar.value
--- 		local percent = get_percent(self.value, self.value_min, self.value_max)
--- 		drawScaled(x + FixedMul(FixedMul(self.width, scale), percent), y, scale, handle, V_PERPLAYER|self.flags)
+		
+		if self._cvar_bounds == nil and self.slider_min == nil then
+			self._cvar_bounds = true
+			
+			local i = 0
+			
+			while true do
+				local value, strvalue = CV_GetPossibleValue(self.cvar, i)
+				
+				if strvalue == nil then
+					break
+				end
+				
+				if strvalue == "MIN" then
+					self.slider_min = value
+				elseif strvalue == "MAX" then
+					self.slider_max = value
+				end
+				
+				i = $ + 1
+			end
+		end
+		
+		local value_min = self.slider_min
+		local value_max = self.slider_max
+		local percent = get_percent(value, value_min, value_max)
+		v.drawScaled(x + FixedMul(self.width, percent), y, scale, handle)
+		
+		local defaultvalue = self.cvar.defaultvalue
+		
+		if self.cvar.flags & CV_FLOAT then
+			defaultvalue = tofixed($)
+		end
+			
+		if self.cvar.value ~= self.cvar.defaultvalue then
+			
+			local percent = get_percent(defaultvalue, value_min, value_max)
+			
+			v.drawScaled(x + FixedMul(self.width, percent), y, scale, handle, V_60TRANS)
+		end
+		
+		if self.parent and self.parent.selection == self.index then
+			local value = value
+			
+			if self.cvar.flags & CV_FLOAT then
+				value = L_FixedDecimal(value, 2)
+			end
+			
+			v.drawString(x + FixedMul(self.width, FU / 2), y - FU * 3, value, V_TRANSLUCENT, "thin-fixed-center")
+		end
+	end
+end
+
+function MenuItem_Slider:activate(increment)
+	if self.link == "" then
+		SetActive(false)
+		return
+	end
+
+	if self.link then
+		Menu_GotoLink(self.link)
+	end
+	
+	if self.cvar then
+		local value = self.cvar.value + increment * self.slider_step
+		
+		local value_min = tonumber(self.slider_min)
+		local value_max = tonumber(self.slider_max)
+		
+		value = min(max($, value_min), value_max)
+		
+-- 		local flags = self.cvar.flags
+		if self.cvar.flags & CV_FLOAT then
+			value = L_FixedDecimal(value, 4) --do not use 5
+-- 			CV_SetFlags(self.cvar, flags & ~CV_FLOAT)
+		end
+		
+		CV_Set(self.cvar, value, true)
+		
+-- 		CV_SetFlags(self.cvar, flags)
+	end
+	
+	if self.action then
+		next_action = self:action()
+	end
+end
+
+--menu textbox
+local MenuItem_Textbox = MenuItem_Text:inherit()
+rawset(_G, "MenuItem_Textbox", MenuItem_Textbox)
+
+function MenuItem_Textbox:new(a)
+	local a = self.super:new(a)
+	setmetatable(a, self)
+	
+	a.cvar = $ or nil
+	a.value = $ or (a.cvar and a.cvar.string) or ""
+	
+	a.cursor_blink = $ or 0
+	
+	a.box = $ or MenuItem_Box:new{width = FU * 250, height = FU * 15, align = "left"}
+	a.box_label = $ or MenuItem_Text:new{}
+	
+	return a
+end
+
+function MenuItem_Textbox:getBounds()
+	local width = self.box.width--self._width or 0
+	local height = FU * 8 + self.box.height --inaccurate in some cases
+	
+	return width, height
+end
+
+function MenuItem_Textbox:draw(x, y)
+	self.super.draw(self, x, y)
+	
+	--only designed to be used with left alignment
+-- 	local align, align_string, factor = self.box:getAlignment()
+	self.box:draw(x + self.box.width / 2, y + FU * 8)
+	
+	local text_padding = self.box.corner_size
+	
+	self.box_label.label = self.value
+	self.cursor_blink = $ + v.deltaTics()
+	
+	if self.parent and self.parent.selection == self.index and (self.cursor_blink * 3 / TICRATE) % FU < FU / 2 then
+		self.box_label.label = $.."|"
+	end
+	
+	self.box_label:draw(x + text_padding, y + FU * 8 + min(text_padding, self.box.height / 2 - FU * 8 / 2))
+end
+
+MenuItem_Textbox.activate = MenuItem_Button.activate
+
+function MenuItem_Textbox:onKeyInput(key, name)
+-- 	if not input.keyNumPrintable(key.num) then
+-- 		return
+-- 	end
+	
+-- 	print(name)
+
+	if name == "backspace" then
+		self.value = $:sub(1, $:len() - 1)
+	end
+
+-- 	if name == "enter" then
+-- 		self:activate(1)
+-- 	end
+	
+	if self.cvar then
+		CV_Set(self.cvar, self.value, true)
+	end
+end
+
+function MenuItem_Textbox:onTextInput(text)
+	if text == nil then
+		return true
+	end
+-- 	if not input.keyNumPrintable(key.num) then
+-- 		return
+-- 	end
+	
+-- 	print(text.text)
+	self.value = $..text.text
+	
+	if self.cvar then
+		CV_Set(self.cvar, self.value, true)
 	end
 end
 
@@ -790,6 +989,7 @@ end
 function MenuItem_Box:draw(x, y)
 	local width, height = self:getBounds()
 	local corner_size = FixedMul(self.corner_size, cv_luamenu_rounded.value)
+	corner_size = min(min($, height / 2), width / 2)
 	
 	width, height, corner_size = FixedMul($, self.scale), FixedMul($, self.scale), FixedMul($, self.scale)
 	
@@ -1054,6 +1254,7 @@ local function Input(key)
 	
 	if menuactive and current_popup then
 		--dismiss the popup
+		input.setTextInputMode(false)
 -- 		if name == "escape" then
 -- 			current_popup = nil
 -- 		end
@@ -1119,7 +1320,11 @@ local function Input(key)
 		return
 	end
 	
--- 	print(name)
+	if menu.items[menu.selection] and menu.items[menu.selection].onKeyInput
+	and menu.items[menu.selection]:onKeyInput(key, name) then
+		return
+	end
+	
 	local scrollby = 0
 	if name == "down arrow" then
 		scrollby = 1
@@ -1146,6 +1351,13 @@ local function Input(key)
 		end
 	end
 	
+	input.setTextInputMode(false)
+	
+	if menu.items[menu.selection] and menu.items[menu.selection].onTextInput
+	and menu.items[menu.selection]:onTextInput() then
+		input.setTextInputMode(true)
+	end
+	
 	if key.num == input.gameControlToKeyNum(GC_CONSOLE) then
 		return
 	end
@@ -1161,6 +1373,18 @@ addHook("KeyUp", function(key)
 	
 	keyHold[name] = nil
 	keyHold_lock[name] = nil
+end)
+
+addHook("TextInput", function(text)
+	if not menuactive then return end
+	
+	local menu = menus[current_menu]
+	assert(menu, ("Input: Invalid menu \"%s\"!"):format(tostring(current_menu))) --r
+	
+	if menu.items[menu.selection] and menu.items[menu.selection].onTextInput
+	and menu.items[menu.selection]:onTextInput(text) then
+		return
+	end
 end)
 
 local mouse_pressed = false
@@ -1327,19 +1551,7 @@ local function Drawer(drawer, player)
 	
 	--draw popup
 	if current_popup then
-		local popup = current_popup
-		popup:draw(FU * 320 / 2, FU * 100 / 2)
--- 		v.fadeScreen(0xFF00, 16)
-		
--- 		local width = FU * 250
--- 		local height = FU * 100
--- 		local x, y = FU * 160, FU * 100
-		
--- 		v.drawFixedFill(x - width / 2, y - height / 2, width, height, 159)
-		
--- 		--TODO: greatest word wrapping
--- 		v.drawString(x, y - height / 2 - FU * 4, popup.title, V_ALLOWLOWERCASE, "fixed-center")
--- 		v.drawString(x, y - height / 2 + FU * 8, popup.message, V_ALLOWLOWERCASE, "fixed-center")
+		current_popup:draw(FU * 320 / 2, FU * 100 / 2)
 	end
 	
 -- 	v.drawScaled(mx, my, FU, cachePatch("M_CURSOR"))

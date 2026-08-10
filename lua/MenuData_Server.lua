@@ -203,6 +203,19 @@ end
 local function serv_connect(ip, port)
 	menuactive = true
 	Menu_GotoLink("Sonikm")
+	
+	if port == nil then
+		port = 5029
+		
+		for i = 1, ip:len() do
+			if ip:sub(i, i) == ":" then
+				port = ip:sub(i + 1, -1)
+				
+				ip = $:sub(1, i - 1)
+			end
+		end
+	end
+	
 	print("Connecting to.. "..ip..", "..port)
 	viewip = ip..":"..port
 	
@@ -213,6 +226,7 @@ local function serv_connect(ip, port)
 	
 	CL_ConnectToServer()
 end
+rawset(_G, "serv_connect", serv_connect)
 
 --[[
 // This packet is too large
