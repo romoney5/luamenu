@@ -251,6 +251,7 @@ menus.OptionsMenu_Luamenu = Menu:new{
 		MenuItem_Button:new{label = "Background Decorations", desc = "Show visual decorations in the background", cvar = CV_FindVar("luamenu_bgdecos"), spacing = FU * 2},
 		MenuItem_Button:new{label = "Animations", desc = "Enable animations when entering pages, hovering, etc.", cvar = CV_FindVar("luamenu_anims"), spacing = FU * 2},
 		MenuItem_Button:new{label = "Tooltips", desc = "Show short descriptions of menu options at the bottom", cvar = CV_FindVar("luamenu_tooltips"), spacing = FU * 2},
+		MenuItem_Slider:new{label = "Rounded Corners", desc = "Enable rounded corners on boxes", cvar = CV_FindVar("luamenu_rounded"), spacing = FU * 2},
 	},
 }
 

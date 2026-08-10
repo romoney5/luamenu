@@ -13,6 +13,7 @@ local cv_menubgcolor = CV_FindVar("menubgcolor") or {value = 159}
 local cv_luamenu_bgdecos = CV_RegisterVar{name = "luamenu_bgdecos", defaultvalue = "On", PossibleValue = CV_OnOff, flags = CV_SAVE}
 local cv_luamenu_anims = CV_RegisterVar{name = "luamenu_anims", defaultvalue = "On", PossibleValue = CV_OnOff, flags = CV_SAVE}
 local cv_luamenu_tooltips = CV_RegisterVar{name = "luamenu_tooltips", defaultvalue = "On", PossibleValue = CV_OnOff, flags = CV_SAVE}
+local cv_luamenu_rounded = CV_RegisterVar{name = "luamenu_rounded", defaultvalue = "1", PossibleValue = {MIN = 0, MAX = FU * 3}, flags = CV_SAVE|CV_FLOAT}
 
 local v = {}
 
@@ -31,8 +32,6 @@ local keyHold = {}
 local keyHold_lock = {}
 
 local cache = {}
-
---lock contros after entering a menu
 
 --clear the cache once an addon is loaded
 addHook("AddonLoaded", function()
@@ -442,7 +441,6 @@ function MenuItem_Text:new(a)
 	a.label = $ or "Button"
 	a.font = $ or "STCFN"
 	a.scale = $ or FU
-	a.link = $ or nil
 	
 	a.parent_width = $ or 0
 	
@@ -620,6 +618,9 @@ function MenuItem_Button:new(a)
 	setmetatable(a, self)
 	
 	a.link = $ or nil
+	a.cvar = $ or nil
+	
+	a.action = $ or nil
 	
 	a.text_label = $ or MenuItem_Text:new{colored = true, align = "right"}
 	
@@ -652,6 +653,49 @@ function MenuItem_Button:activate(increment)
 	
 	if self.action then
 		next_action = self:action()
+	end
+end
+
+--menu button
+local MenuItem_Slider = MenuItem_Text:inherit()
+rawset(_G, "MenuItem_Slider", MenuItem_Slider)
+
+function MenuItem_Slider:new(a)
+	local a = self.super:new(a)
+	setmetatable(a, self)
+	
+	a.width = $ or FU * 60
+	a.slider_scale = $ or FU / 3
+	
+	a.cvar = $ or nil
+	
+	return a
+end
+
+local function get_percent(a, x, y)
+	return FixedDiv(a - x, (y - x) or 1)
+end
+
+function MenuItem_Slider:draw(x, y)
+	self.super.draw(self, x, y)
+	
+	--only designed to be used with left alignment
+	if self.cvar then
+		local side = cachePatch("MENU_SLIDAR_SIDE")
+		local middle = cachePatch("MENU_SLIDAR_MIDDLE")
+		local handle = cachePatch("MENU_SLIDAR_HANDLE")
+		local scale = self.slider_scale
+		local x = x + self.parent.width - self.width
+		local y = y + self.scale * 8 / 2
+		
+		v.drawScaled(x, y, scale, side, 0)
+		v.drawStretched(x, y, self.width, scale, middle, 0)
+		v.drawScaled(x + self.width, y, scale, side, V_FLIP)
+		
+		local value = self.cvar.value
+-- 		local value_min = self.cvar.value
+-- 		local percent = get_percent(self.value, self.value_min, self.value_max)
+-- 		drawScaled(x + FixedMul(FixedMul(self.width, scale), percent), y, scale, handle, V_PERPLAYER|self.flags)
 	end
 end
 
@@ -745,7 +789,7 @@ end
 
 function MenuItem_Box:draw(x, y)
 	local width, height = self:getBounds()
-	local corner_size = self.corner_size
+	local corner_size = FixedMul(self.corner_size, cv_luamenu_rounded.value)
 	
 	width, height, corner_size = FixedMul($, self.scale), FixedMul($, self.scale), FixedMul($, self.scale)
 	
@@ -958,7 +1002,7 @@ local function ShowPopup(title, message, buttons)
 		buttons = {},
 	}
 	
-	buttons = $ or {{body = "OK", keys = {"escape"}, action = function(self) return true end}}
+	buttons = $ or {{body = "OK", keys = {"escape", "enter", "y"}, action = function(self) return true end}}
 	
 	if buttons then
 		for i, v in ipairs(buttons) do
@@ -995,6 +1039,7 @@ local function GetState()
 	local state = "game"
 	
 	if titlemapinaction then state = "title" end
+	if chatactive then state = "chat" end
 	
 	return state
 end
@@ -1100,6 +1145,12 @@ local function Input(key)
 			end
 		end
 	end
+	
+	if key.num == input.gameControlToKeyNum(GC_CONSOLE) then
+		return
+	end
+	
+	return true
 end
 
 --first time i've ever used this hook
