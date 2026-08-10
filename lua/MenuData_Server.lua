@@ -625,8 +625,9 @@ menus.ServerBowser = Menu:new{
 			local port = server.port
 -- 			ip = "10.0.0.242"
 -- 			serv_connect(ip, port)
-
-			COM_BufInsertText(nil, "connect "..ip.." "..port)
+			return function()
+				COM_BufInsertText(nil, "connect "..ip.." "..port)
+			end
 		end
 		
 		local function get_servers(button)

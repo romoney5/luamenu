@@ -18,6 +18,7 @@ local cv_luamenu_bgdecos = CV_RegisterVar{name = "luamenu_bgdecos", defaultvalue
 local cv_luamenu_anims = CV_RegisterVar{name = "luamenu_anims", defaultvalue = "On", PossibleValue = CV_OnOff, flags = CV_SAVE}
 local cv_luamenu_tooltips = CV_RegisterVar{name = "luamenu_tooltips", defaultvalue = "On", PossibleValue = CV_OnOff, flags = CV_SAVE}
 local cv_luamenu_rounded = CV_RegisterVar{name = "luamenu_rounded", defaultvalue = "1", PossibleValue = {MIN = 0, MAX = FU * 4}, flags = CV_SAVE|CV_FLOAT}
+local cv_luamenu_sliders = CV_RegisterVar{name = "luamenu_sliders", defaultvalue = "On", PossibleValue = CV_OnOff, flags = CV_SAVE}
 
 local v = {}
 
@@ -197,8 +198,8 @@ function Menu:updateItems()
 			
 			local width, height = item:getBounds()
 			
-			self.cursor_position.x = ease.linear(FU, $, --[[x + ]]align + FixedMul(width, factor) - FU * (24 or 32)) --TODO: untie from fps and make this a function because why not
-			self.cursor_position.y = ease.linear(FU, $, --[[y + ]]py)
+			self.cursor_position.x = ease.linear(FU, $, align + FixedMul(width, factor) - FU * (24 or 32)) --TODO: untie from fps and make this a function because why not
+			self.cursor_position.y = ease.linear(FU, $, py)
 		end
 	end
 end
@@ -241,6 +242,15 @@ end
 
 function Menu:draw()
 	local x, y = self:getPosition()
+	
+	if cv_luamenu_anims.value then
+		self.dest_scroll_time = min($ + FU / 20, FU)
+	else
+		self.dest_scroll_time = FU
+	end
+	
+	self.scroll = ease.outquad(self.dest_scroll_time, self.dest_scroll_origin, self.dest_scroll)
+	
 	y = $ - self.scroll
 	
 	x = $ + ease.outcubic(menu_enter_anim, FU * 15, 0)
@@ -264,8 +274,10 @@ function Menu:draw()
 		--draw the cursor
 		if self.selection == i then
 			local speed = cv_luamenu_anims.value and v.deltaTics() * 3 / 4 or FU
+			
 			self.cursor_position.x = ease.linear(speed, $, align + FixedMul(width, factor) - FU * (24 or 32)) --tied to fps
 			self.cursor_position.y = ease.linear(speed, $, py)
+			
 			v.drawScaled(x + self.cursor_position.x, y + self.cursor_position.y, FU, cachePatch("M_CURSOR"), 0)
 		end
 	end
@@ -281,14 +293,6 @@ function Menu:draw()
 			v.drawString(FU * 320 / 2, FU * 200 - FU * 10, desc, V_ALLOWLOWERCASE|V_SNAPTOBOTTOM, "thin-fixed-center")
 		end
 	end
-	
-	if cv_luamenu_anims.value then
-		self.dest_scroll_time = min($ + FU / 20, FU)
-	else
-		self.dest_scroll_time = FU
-	end
-	
-	self.scroll = ease.outquad(self.dest_scroll_time, self.dest_scroll_origin, self.dest_scroll)
 	
 	if self.on_draw then
 		self:on_draw(v)
@@ -732,16 +736,25 @@ function MenuItem_Slider:draw(x, y)
 	--only designed to be used with left alignment
 	if self.cvar then
 		do
-			local side = cachePatch("MENU_SLIDAR_SIDE")
-			local middle = cachePatch("MENU_SLIDAR_MIDDLE")
-			local handle = cachePatch("MENU_SLIDAR_HANDLE")
+			local side = cachePatch(cv_luamenu_sliders.value and "MENU_SLIDAR_SIDE" or "M_SLIDEL")
+			local middle = cachePatch(cv_luamenu_sliders.value and "MENU_SLIDAR_MIDDLE" or "M_SLIDEM")
+			local handle = cachePatch(cv_luamenu_sliders.value and "MENU_SLIDAR_HANDLE" or "M_SLIDEC")
 			local scale = self.slider_scale
 			local x = x + self.parent.width - self.width
 			local y = y + self.scale * 8 / 2
+			local true_scale = cv_luamenu_sliders.value and scale or scale * 3
+			local true_x = cv_luamenu_sliders.value and x or x - FU * 3
+			local true_y = cv_luamenu_sliders.value and y or y - FU * 4
 			
-			v.drawScaled(x, y, scale, side, 0)
-			v.drawStretched(x, y, self.width, scale, middle, 0)
-			v.drawScaled(x + self.width, y, scale, side, V_FLIP)
+			if cv_luamenu_sliders.value then
+				v.drawScaled(true_x, true_y, true_scale, side, 0)
+				v.drawStretched(true_x, true_y, self.width, true_scale, middle, 0)
+				v.drawScaled(true_x + self.width, true_y, true_scale, side, V_FLIP)
+			else
+				v.drawScaled(true_x - FU * 2, true_y, true_scale, side, 0)
+				v.drawStretched(true_x + FU, true_y, self.width / middle.width, true_scale, middle, 0)
+				v.drawScaled(true_x + self.width + FU * 6, true_y, true_scale, side, V_FLIP)
+			end
 			
 			local value = self.cvar.value
 			
@@ -770,7 +783,7 @@ function MenuItem_Slider:draw(x, y)
 			local value_min = self.slider_min
 			local value_max = self.slider_max
 			local percent = get_percent(value, value_min, value_max)
-			v.drawScaled(x + FixedMul(self.width, percent), y, scale, handle)
+			v.drawScaled(true_x + FixedMul(self.width, percent), true_y, true_scale, handle)
 			
 			local defaultvalue = self.cvar.defaultvalue
 			
@@ -779,10 +792,9 @@ function MenuItem_Slider:draw(x, y)
 			end
 				
 			if self.cvar.value ~= self.cvar.defaultvalue then
-				
 				local percent = get_percent(defaultvalue, value_min, value_max)
 				
-				v.drawScaled(x + FixedMul(self.width, percent), y, scale, handle, V_60TRANS)
+				v.drawScaled(true_x + FixedMul(self.width, percent), true_y, true_scale, handle, V_60TRANS)
 			end
 			
 			if self.parent and self.parent.selection == self.index then
@@ -1431,6 +1443,8 @@ local function Drawer(drawer, player)
 	
 	menu_enter_anim = min($ + v.deltaTics() / 10, FU)
 	menu_exit_anim = min($ + v.deltaTics() / 10, FU)
+	
+	current_menu = $ or "MainMenu"
 	
 	local menu = menus[current_menu]
 	assert(menu, ("Drawer: Invalid menu \"%s\"!"):format(tostring(current_menu)))

@@ -58,6 +58,13 @@ menus.MainMenu = Menu:new{
 	anchor = {x = "center", y = "bottom"},
 	show_version = true,
 	
+	on_entry = function(self, old_menu)
+		--reset to 1 Player on pause and set the cursor instantly
+		if old_menu then return end
+		self.selection = 1
+		self:updateItems()
+	end,
+	
 	items = {
 		MenuItem_Button:new{label = "1  Player", align = "center", link = "SingleplayerMenu"},
 		MenuItem_Button:new{label = "Multiplayer", align = "center", link = "MultiplayerMenu"},
@@ -286,7 +293,8 @@ menus.OptionsMenu_Luamenu = Menu:new{
 		MenuItem_Button:new{label = "Uppercase Menus", desc = "Force uppercase text in menus", cvar = CV_FindVar("menucaps"), spacing = FU * 2}, --srb2-edit
 		MenuItem_Button:new{label = "Highlight Color", desc = "Change the color of highlighted text", cvar = CV_FindVar("menucolor"), spacing = FU * 2}, --srb2-edit, romoney5
 		MenuItem_Button:new{label = "Background Color", desc = "Change the color of backgrounds", cvar = CV_FindVar("menubgcolor"), spacing = FU * 2}, --gks edit
-		MenuItem_Slider:new{label = "Rounded Corners", desc = "Enable rounded corners on boxes", slider_step = FU / 4, cvar = CV_FindVar("luamenu_rounded"), spacing = FU * 2},
+		MenuItem_Button:new{label = "Stylized Sliders", desc = "Enable rounded sliders", cvar = CV_FindVar("luamenu_sliders"), spacing = FU * 2},
+		MenuItem_Slider:new{label = "Rounded Corners", desc = "Change the size of rounded corners on boxes", slider_step = FU / 4, cvar = CV_FindVar("luamenu_rounded"), spacing = FU * 2},
 		
 		MenuItem_Header:new{label = "Miscellaneous"},
 		MenuItem_Button:new{label = "Disable Luamenu...", action = function(self)
@@ -606,20 +614,20 @@ menus.OptionsMenu_Network = Menu:new{
 	
 	items = {
 		MenuItem_Header:new{label = "General"},
-		MenuItem_Slider:new{label = "Minimum Delay", cvar = CV_FindVar("mindelay"), spacing = FU * 2},
-		MenuItem_Button:new{label = "Gentleman's Delay", cvar = CV_FindVar("gentlemensdelay"), spacing = FU * 2},
-		MenuItem_Slider:new{label = "Connection Timeout", slider_step = TICRATE, slider_min = 5, slider_max = TICRATE * 20, cvar = CV_FindVar("nettimeout"), spacing = FU * 2},
-		MenuItem_Slider:new{label = "Network Buffer", cvar = CV_FindVar("netticbuffer"), spacing = FU * 2},
+		MenuItem_Slider:new{label = "Minimum Delay", desc = "Minimum input delay", cvar = CV_FindVar("mindelay"), spacing = FU * 2},
+		MenuItem_Button:new{label = "Gentleman's Delay", desc = "As a host, use the lowest player input delay", cvar = CV_FindVar("gentlemensdelay"), spacing = FU * 2},
+		MenuItem_Slider:new{label = "Connection Timeout", desc = "Tics of lost connection before disconnecting", slider_step = TICRATE, slider_min = 5, slider_max = TICRATE * 20, cvar = CV_FindVar("nettimeout"), spacing = FU * 2},
+		MenuItem_Slider:new{label = "Network Buffer", desc = "Tic buffer; higher amounts increase latency but smoothen gameplay", cvar = CV_FindVar("netticbuffer"), spacing = FU * 2},
 		
 		MenuItem_Header:new{label = "Server Browser"},
 		MenuItem_Slider:new{label = "Server Browser Timeout", slider_min = 1, slider_max = 20, cvar = CV_FindVar("masterserver_timeout"), spacing = FU * 2},
 		
 		MenuItem_Header:new{label = "Connection Screen"},
-		MenuItem_Button:new{label = "Enable Connection Screen", cvar = CV_FindVar("showserverinfo"), spacing = FU * 2},
-		MenuItem_Button:new{label = "Return to Server Browser", cvar = CV_FindVar("returnfromconnect"), spacing = FU * 2},
+		MenuItem_Button:new{label = "Enable Connection Screen", desc = "Show a connection screen before joining a server", cvar = CV_FindVar("showserverinfo"), spacing = FU * 2},
+		MenuItem_Button:new{label = "Return to Server Browser", desc = "Return to the Server Browser after disconnecting", cvar = CV_FindVar("returnfromconnect"), spacing = FU * 2},
 		
 		MenuItem_Header:new{label = "Diagnostic"},
-		MenuItem_Button:new{label = "Network Statistics", cvar = CV_FindVar("netstat"), spacing = FU * 2},
+		MenuItem_Button:new{label = "Network Statistics", desc = "Show misc. network info", cvar = CV_FindVar("netstat"), spacing = FU * 2},
 	},
 }
 
