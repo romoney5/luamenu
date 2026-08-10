@@ -213,6 +213,7 @@ menus.OptionsMenu_Luamenu = Menu:new{
 		MenuItem_Header:new{label = "Visual"},
 		MenuItem_Button:new{label = "Background Decorations", desc = "Show visual decorations in the background", cvar = CV_FindVar("luamenu_bgdecos"), spacing = FU * 2},
 		MenuItem_Button:new{label = "Animations", desc = "Enable animations when entering pages, hovering, etc.", cvar = CV_FindVar("luamenu_anims"), spacing = FU * 2},
+		MenuItem_Button:new{label = "Tooltips", desc = "Show short descriptions of menu options at the bottom", cvar = CV_FindVar("luamenu_tooltips"), spacing = FU * 2},
 	},
 }
 
@@ -223,7 +224,17 @@ menus.OptionsMenu_P1Controls = Menu:new{
 	title = "CONTROL SETUP",--"AY BOY I JUST GOT THE NEW iPHONE",--\nIT EVEN GOT AN APP TO DESTROY ALL OPPS",
 	
 	items = {
-		MenuItem_Button:new{label = "Control Configuration...", desc = "Change keyboard controls", link = "a", spacing = FU * 2},
+		MenuItem_Button:new{label = "Control Configuration...", desc = "Change keyboard controls", link = new_menu("OptionsMenu_P1Controls_Keyboard", Menu:new{
+			anchor = {x = "center", y = "top"}, width = FU * 320 - FU * 30 * 2, height = FU * 200 - FU * 20 * 2,
+			title = "CONTROL SETUP",
+			
+			items = {
+				MenuItem_Header:new{label = "'''''''''''''''''''''''''''"},
+				MenuItem_Header:new{label = "digo"},
+				MenuItem_Header:new{label = "Movement"},
+				MenuItem_Button:new{label = "Use Mouse", desc = "Enable mouse movement", cvar = CV_FindVar("use_mouse"), spacing = FU * 2 + FU * 10},
+			},
+		}), spacing = FU * 2},
 		MenuItem_Button:new{label = "Mouse Options...", desc = "Change mouse settings", link = new_menu("OptionsMenu_P1Controls_Mouse", Menu:new{
 			anchor = {x = "center", y = "top"}, width = FU * 320 - FU * 30 * 2, height = FU * 200 - FU * 20 * 2,
 			title = "CONTROL SETUP",

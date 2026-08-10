@@ -12,6 +12,7 @@ local cv_menubgcolor = CV_FindVar("menubgcolor") or {value = 159}
 
 local cv_luamenu_bgdecos = CV_RegisterVar{name = "luamenu_bgdecos", defaultvalue = "On", PossibleValue = CV_OnOff, flags = CV_SAVE}
 local cv_luamenu_anims = CV_RegisterVar{name = "luamenu_anims", defaultvalue = "On", PossibleValue = CV_OnOff, flags = CV_SAVE}
+local cv_luamenu_tooltips = CV_RegisterVar{name = "luamenu_tooltips", defaultvalue = "On", PossibleValue = CV_OnOff, flags = CV_SAVE}
 
 local v = {}
 
@@ -21,6 +22,10 @@ local current_popup
 local next_action
 
 local MenuClass = MenuClass
+
+local menu_time = 0
+local menu_enter_anim = FU
+local menu_exit_anim = FU
 
 local function SetActive(active)
 	if active then
@@ -42,15 +47,15 @@ local function SetActive(active)
 			JNI_SetTouchVisible(true)
 		end
 	end
+	
+	--clear anims when toggling the menu
+	menu_enter_anim = FU
+	menu_exit_anim = FU
 end
-
-local menu_time = 0
-local menu_enter_anim = FU
-local menu_exit_anim = FU
 
 local function Menu_GotoLink(link)
 	if not menus[link] then
-		ShowPopup("Menu_GotoLink", ("Could not resolve menu link \"%s\"."):format(tostring(link)))
+		ShowPopup("Menu_GotoLink", ("Could not find menu link \"%s\".\n\nThis menu may be unfinished."):format(tostring(link)))
 		return
 	end
 -- 	assert(menus[link], ("Menu_GotoLink: Could not resolve menu link \"%s\"."):format(tostring(link)))
@@ -138,8 +143,8 @@ function Menu:updateItems()
 			
 			local width, height = item:getBounds()
 			
-			self.cursor_position.x = ease.linear(FU, $, x + align + FixedMul(width, factor) - FU * (24 or 32)) --TODO: untie from fps and make this a function because why not
-			self.cursor_position.y = ease.linear(FU, $, y + py)
+			self.cursor_position.x = ease.linear(FU, $, --[[x + ]]align + FixedMul(width, factor) - FU * (24 or 32)) --TODO: untie from fps and make this a function because why not
+			self.cursor_position.y = ease.linear(FU, $, --[[y + ]]py)
 		end
 	end
 end
@@ -204,15 +209,15 @@ function Menu:draw()
 		
 		--draw the cursor
 		if self.selection == i then
-			local speed = cv_luamenu_anims.value and FU / 3 or FU
-			self.cursor_position.x = ease.linear(speed, $, x + align + FixedMul(width, factor) - FU * (24 or 32)) --tied to fps
-			self.cursor_position.y = ease.linear(speed, $, y + py)
-			v.drawScaled(self.cursor_position.x, self.cursor_position.y, FU, v.cachePatch("M_CURSOR"), 0)
+			local speed = cv_luamenu_anims.value and v.deltaTics() * 3 / 4 or FU
+			self.cursor_position.x = ease.linear(speed, $, align + FixedMul(width, factor) - FU * (24 or 32)) --tied to fps
+			self.cursor_position.y = ease.linear(speed, $, py)
+			v.drawScaled(x + self.cursor_position.x, y + self.cursor_position.y, FU, v.cachePatch("M_CURSOR"), 0)
 		end
 	end
 	
 	--draw classic tooltip
-	if self.items[self.selection] then
+	if self.items[self.selection] and cv_luamenu_tooltips.value then
 		local desc = self.items[self.selection].desc
 		
 		if desc then
@@ -223,12 +228,17 @@ function Menu:draw()
 		end
 	end
 	
+	if cv_luamenu_anims.value then
+		self.dest_scroll_time = min($ + FU / 20, FU)
+	else
+		self.dest_scroll_time = FU
+	end
+	
+	self.scroll = ease.outquad(self.dest_scroll_time, self.dest_scroll_origin, self.dest_scroll)
+	
 	if self.on_draw then
 		self:on_draw(v)
 	end
-	
-	self.dest_scroll_time = min($ + FU / 20, FU)
-	self.scroll = ease.outquad(self.dest_scroll_time, self.dest_scroll_origin, self.dest_scroll)
 end
 
 function Menu:getYPositionAt(index)
@@ -389,6 +399,7 @@ function MenuItem_Text:new(a)
 	a.parent_width = $ or 0
 	
 	a.colored = $ or false
+	a.force_lowercase = $ or false
 	
 	return a
 end
@@ -443,19 +454,20 @@ local function cachePatch(patchname)
 	return cache[patchname]
 end
 
-function MenuItem_Text:GetLayout()
+function MenuItem_Text:recalcLayout()
 	local label = self.label
-	local uppercase = cv_menucaps.value
+	local uppercase = cv_menucaps.value and not self.force_lowercase
 	local layout = {}
 	self.text_layout = layout
 	
 	local line = {}
 	
 	if uppercase then
-		char = $:upper()
+		label = $:upper()
 	end
 	
 	local width = 0
+	local parent_width = FixedDiv(self.parent_width, self.scale or 1)
 	
 	for i = 1, label:len() + 1 do
 		local char = label:sub(i, i)
@@ -469,7 +481,7 @@ function MenuItem_Text:GetLayout()
 			line = {}
 			
 			continue
-		elseif self.parent_width and width > self.parent_width then --word wrapping
+		elseif parent_width and width > parent_width then --word wrapping
 			line.width = width
 			width = 0
 			
@@ -529,9 +541,14 @@ function MenuItem_Text:draw(x, y)
 		return
 	end
 	
-	if self._old_label ~= self.label then --TODO: wifth
+	local uppercase = cv_menucaps.value and not self.force_lowercase
+	
+	if self._old_label ~= self.label or self._old_uppercase ~= uppercase
+	or self._old_parent_width ~= self.parent_width then
 		self._old_label = self.label
-		self:GetLayout()
+		self._old_uppercase = uppercase
+		self._old_parent_width = self.parent_width
+		self:recalcLayout()
 	end
 
 	local label = self.label
@@ -540,7 +557,6 @@ function MenuItem_Text:draw(x, y)
 	local max_width = 0 --used to get text bounds
 	local flags = self:getFlags(self.colored)
 	local col = v.getStringColormap(flags)
-	local uppercase = cv_menucaps.value
 	
 	local lines = 0
 	
@@ -564,42 +580,7 @@ function MenuItem_Text:draw(x, y)
 		max_width = max($, line.width)
 	end
 	
-	--run twice: once to calculate the width, once to draw
--- 	for i = 1, label:len() do
--- 		local char = label:sub(i, i)
-		
--- 		if uppercase then
--- 			char = $:upper()
--- 		end
-		
--- 		local code = char:byte()
-		
--- 		local patchname = self.font..ZeroNumber(code, 3)
--- 		local patch = cachePatch(patchname)
-		
--- 		if patch then
--- 			if draw then
--- 				v.drawScaled(x + width, y + lines * scale * 10, scale, patch, 0, col)
--- 			end
-			
--- 			width = $ + scale * patch.width
--- 		else
--- 			width = $ + scale * 4
--- 		end
-		
--- 		--TODO: proper newline alignment
--- 		if draw and char == "\n" then
--- 			width = 0
--- 			lines = $ + 1
--- 		end
--- 	end
-	
--- 	if not draw then
--- 		local _, align_string, factor = self:getAlignment()
--- 		x = $ + FixedMul(width, factor)
--- 	end
-	
-	self._width = max_width --this should be in getlayout
+	self._width = max_width --this should be in recalcLayout
 end
 
 --menu button
@@ -609,7 +590,6 @@ rawset(_G, "MenuItem_Button", MenuItem_Button)
 function MenuItem_Button:new(a)
 	local a = self.super:new(a)
 	setmetatable(a, self)
--- 	print(self.label)
 	
 	a.link = $ or nil
 	
@@ -623,8 +603,6 @@ function MenuItem_Button:draw(x, y)
 	
 	--only designed to be used with left alignment
 	if self.cvar then
--- 		local flags = self:getFlags(true)
-		
 		self.text_label.label = self.cvar.string
 		self.text_label:draw(x + self.parent.width, y)
 	end
@@ -658,21 +636,12 @@ function MenuItem_Header:new(a)
 	setmetatable(a, self)
 	
 	a.label = $ or "Header"
+	a.label_label = $ or MenuItem_Text:new{colored = true, label = a.label}
 	
 	a.pre_spacing = $ or FU * 16
 	a.spacing = $ or FU * 3
 	
 	return a
-end
-
-function MenuItem_Header:getFlags(selected)
-	local menucaps = (not cv_menucaps.value) and V_ALLOWLOWERCASE or 0
-	local color = 0
-	
-	--use a custom highlight color if available, otherwise use yellow
-	color = cv_menucolor.value
-	
-	return menucaps|color
 end
 
 function MenuItem_Header:canSelect()
@@ -703,7 +672,7 @@ function MenuItem_Header:draw(x, y)
 	local width, height = self:getBounds()
 	local new_x = x - FU * 11
 	
-	v.drawString(new_x, y - FU * 9, self.label, self:getFlags(), "fixed"..self.align_string) --TODO: alignment option
+	self.label_label:draw(new_x, y - FU * 9)
 	
 	local width = FU * 320 - new_x * 2
 	v.drawFixedFill(new_x, y, width + FU, FU * 1 + FU, cv_menucolor.value ~= V_INVERTMAP and 26 or 0) --shadow
@@ -711,7 +680,8 @@ function MenuItem_Header:draw(x, y)
 end
 
 --rounded box
-
+--a lot of things inherit from this since things with backgrounds look much prettier
+--than just raw text on a screen
 local MenuItem_Box = MenuItem:inherit()
 rawset(_G, "MenuItem_Box", MenuItem_Box)
 
@@ -787,6 +757,39 @@ function MenuItem_Box:draw(x, y)
 	end
 end
 
+--button, but infused with what i like to call.. ui slop
+local MenuItem_UI_Button = MenuItem_Box:inherit()
+rawset(_G, "MenuItem_UI_Button", MenuItem_UI_Button)
+
+function MenuItem_UI_Button:new(a)
+	local a = self.super:new(a)
+	setmetatable(a, self)
+	
+	a.body = $ or "Body"
+	a.width = $ or FU * 50
+	a.height = $ or FU * 30
+	
+	a.on_draw = $ or nil
+	
+-- 	a.open_anim = $ or 0
+	
+	a.body_label = $ or MenuItem_Text:new{label = a.body, align = "center"}
+	
+	return a
+end
+
+function MenuItem_UI_Button:draw(x, y)
+	--draw box
+	self.super.draw(self, x, y)
+	
+	self.body_label:draw(x, y + self.height / 2 - FU * 8 / 2) --TODO: height bouns
+end
+
+function MenuItem_UI_Button:canSelect()
+	return true
+end
+
+--sliding popup
 local MenuItem_Popup = MenuItem_Box:inherit()
 rawset(_G, "MenuItem_Popup", MenuItem_Popup)
 
@@ -810,7 +813,14 @@ function MenuItem_Popup:new(a)
 end
 
 function MenuItem_Popup:draw(x, y)
-	v.fadeScreen(0xFF00, 16)
+	if cv_luamenu_anims.value then
+		self.open_anim = min($ + v.deltaTics() / TICRATE * 4, FU)
+	else
+		self.open_anim = FU
+	end
+	y = ease.outcubic(self.open_anim, $ + FU * 100, $)
+
+	v.fadeScreen(0xFF00, ease.outcubic(self.open_anim, FU * 0, FU * 16) / FU)
 	
 	--draw box
 	self.super.draw(self, x, y)
@@ -967,7 +977,27 @@ local function Input(key)
 end
 
 local mouse_pressed = false
+local mouse_drag = {x = 0, y = 0, dragging = false, start_scroll = 0, updates = 0, prev_x = 0, prev_y = 0}
 loadfile("MenuData.lua")(menus, v)
+
+--screen coordinates to 320x200 coordinates
+local function ScreenToDisplay(x, y)
+	local dupx = v.dupx()
+	local dupy = v.dupy()
+	local width = FU * v.width()
+	local height = FU * v.height()
+	local base_width = FU * 320
+	local base_height = FU * 200
+	local scaled_width = base_width * dupx
+	local scaled_height = base_height * dupy
+	
+	local left = width / 2 - scaled_width / 2
+-- 	local bottom = height / 2 + scaled_height / 2
+-- 	local right = width / 2 + scaled_width / 2
+	local top = height / 2 - scaled_height / 2
+	
+	return FixedMul(x - left, FixedDiv(base_width + left / 2, width)), FixedMul(y - top, FixedDiv(base_height + top / 2, height))
+end
 
 local function Drawer(drawer, player)
 -- 	local serverlistcount = #serverlist
@@ -996,17 +1026,46 @@ local function Drawer(drawer, player)
 -- 	local _, dupx = v.dupx()
 -- 	local _, dupy = v.dupy()
 -- 	mx, my = FixedDiv($, dupx), FixedDiv($, dupy)
+	mx, my = ScreenToDisplay(mx, my)
 -- 	v.drawString(20, 10, (mx / FU).." "..(my / FU))
 -- 	v.drawString(20, 20, v.width())
 	
 	if (mouse.buttons & MB_BUTTON1) then
-		if not mouse_pressed then--or true then
+		--hack to stop initial positions from messing up the drag
+		if mouse_drag.x ~= mx or mouse_drag.y ~= my then
+			mouse_drag.updates = ($ or 0) + 1
+		end
+		
+		if v.isNewTic() then
+			mouse_drag.dx, mouse_drag.dy = mouse_drag.prev_x - mx, mouse_drag.prev_y - my
+		end
+		
+		if not mouse_pressed or mouse_drag.updates <= 2 then--or true then
+			mouse_drag.x, mouse_drag.y = mx, my
+			mouse_drag.prev_x, mouse_drag.prev_y = mx, my
+			mouse_drag.start_scroll = menu.scroll
+		end
+		
+		if abs(mouse_drag.y - my) >= FU * 3 then
+			mouse_drag.dragging = true
+		end
+		
+-- 		menu.scroll = mouse_drag.start_scroll + mouse_drag.y - my
+-- 		menu.dest_scroll_time = FU
+-- 		menu.dest_scroll = menu.scroll
+		if v.isNewTic() and mouse_drag.dragging then
+			menu.scroll_vel = FixedMul(-my + mouse_drag.prev_y, v.deltaTics())--mouse_drag.y - my
+		end
+		
+		mouse_pressed = true
+	else
+		if mouse_pressed and not mouse_drag.dragging then
 			local menux, menuy = menu:getPosition()
 			menuy = $ - menu.scroll
 			for i, item in ipairs(menu.items) do
 				local width, height = item:getBounds()
 				local y = menu:getYPositionAt(i) + menuy
--- 				print(i, y, height)
+				
 				if not (my >= y and my < y + height) then continue end
 				
 				if i == menu.selection then
@@ -1019,13 +1078,37 @@ local function Drawer(drawer, player)
 			end
 		end
 		
-		mouse_pressed = true
-	else
-		if mouse_pressed then
+		if mouse_drag.dragging then
+			local total_height = menu:getYPositionAt(#menu.items + 1)
 			
+			if total_height > menu.height then --also make this a function
+				if menu.scroll > total_height - FU * 150 then
+					menu.scroll_vel = 0
+					menu.dest_scroll_time = 0
+					menu.dest_scroll_origin = menu.scroll
+					menu.dest_scroll = total_height - FU * 150
+				end
+				
+				if menu.scroll < 0 then
+					menu.scroll_vel = 0
+					menu.dest_scroll_time = 0
+					menu.dest_scroll_origin = menu.scroll
+					menu.dest_scroll = 0
+				end
+			else
+				menu.scroll_vel = 0
+				menu.dest_scroll_time = 0
+				menu.dest_scroll_origin = menu.scroll
+				menu.dest_scroll = 0
+			end
 		end
 		
+		mouse_drag.dragging = false
 		mouse_pressed = false
+	end
+	
+	if v.isNewTic() then
+		mouse_drag.prev_x, mouse_drag.prev_y = mx, my
 	end
 	
 	if (mouse.buttons & MB_SCROLLDOWN) then
@@ -1036,6 +1119,24 @@ local function Drawer(drawer, player)
 		menu.scroll_vel = $ - FU / 6
 	end
 	
+	local total_height = menu:getYPositionAt(#menu.items + 1)
+	
+	if not mouse_drag.dragging and menu.dest_scroll_time == FU and total_height > menu.height then
+		if menu.scroll > total_height - FU * 150 then
+			menu.scroll_vel = 0
+			menu.dest_scroll_time = 0
+			menu.dest_scroll_origin = menu.scroll
+			menu.dest_scroll = total_height - FU * 150
+		end
+		
+		if menu.scroll < 0 then
+			menu.scroll_vel = 0
+			menu.dest_scroll_time = 0
+			menu.dest_scroll_origin = menu.scroll
+			menu.dest_scroll = 0
+		end
+	end
+	
 	--TODO:
 	
 	menu.scroll = $ + menu.scroll_vel
@@ -1043,7 +1144,7 @@ local function Drawer(drawer, player)
 	if menu.scroll_vel then
 		menu.dest_scroll_time = FU
 		menu.dest_scroll = menu.scroll
-		menu.scroll_vel = max(abs($) - FU / 32, 0) * ($ < 0 and -1 or 1)
+		menu.scroll_vel = max(abs($) - v.deltaTics() / 5, 0) * ($ < 0 and -1 or 1)
 	end
 	
 	if cv_luamenu_bgdecos.value then
@@ -1076,7 +1177,7 @@ local function Drawer(drawer, player)
 -- 		v.drawString(x, y - height / 2 + FU * 8, popup.message, V_ALLOWLOWERCASE, "fixed-center")
 	end
 	
--- 	v.drawScaled(mx, my, FU, v.cachePatch("M_CURSOR"), V_NOSCALEPATCH|V_NOSCALESTART)
+-- 	v.drawScaled(mx, my, FU, v.cachePatch("M_CURSOR"))
 end
 
 addHook("MenuThinker", function()

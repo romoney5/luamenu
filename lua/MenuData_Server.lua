@@ -10,9 +10,9 @@ local cv_menubgcolor = CV_FindVar("menubgcolor") or {value = 159} --TODO: standa
 local spinner_time = 0
 local spinner_spin = 0
 
-local function DrawSpinner()
+local function DrawSpinner(x, y)
 	local bg = v.cachePatch("MENU_LOAD1")
-	v.drawScaled(FU * 160, FU * 100, FU / 2, bg, V_50TRANS)
+	v.drawScaled(x, y, FU / 2, bg, V_50TRANS)
 	
 	local speed = sin(FixedAngle(spinner_time * 5)) * 2 / 3 + FU * 3 / 2
 	spinner_time = $ + v.deltaTics()
@@ -26,7 +26,7 @@ local function DrawSpinner()
 	for i = -amount * 3 / 2, amount / 2 do
 		local newangle = -(angle + i * ANG1 * 2)
 		local dist = FU * 16 + FU / 2
-		v.drawScaled(FU * 160 + FixedMul(cos(newangle), dist), FU * 100 + FixedMul(sin(newangle), dist), FU / 32, spinner, 0, v.getColormap(nil, nil, "Menu_Translation_"..(cv_menubgcolor.value - 6)))
+		v.drawScaled(x + FixedMul(cos(newangle), dist), y + FixedMul(sin(newangle), dist), FU / 32, spinner, 0, v.getColormap(nil, nil, "Menu_Translation_"..(cv_menubgcolor.value - 6)))
 	end
 end
 
@@ -260,10 +260,10 @@ menus.Sonikm = Menu:new{
 					self.title_label.label = "Connecting to..."
 					self.subtitle_label.label = viewip
 					
-					self.title_label:draw(x + FU * 4, y + FU * 4)
-					self.subtitle_label:draw(x + FU * 4, y + FU * 4 + FU * 10)
+					self.title_label:draw(x + height + FU * 4, y + FU * 4)
+					self.subtitle_label:draw(x + height + FU * 4, y + FU * 4 + FU * 10)
 					
-					DrawSpinner()
+					DrawSpinner(x + height / 2, y + height / 2)
 				elseif cl_mode == CL_VIEWSERVER then
 					self.title_label.label = serverlist[joinnode].info.servername
 					self.subtitle_label.label = serverlist[joinnode].info.maptitle
@@ -298,6 +298,14 @@ menus.Sonikm = Menu:new{
 				end
 			end
 		},
+		
+		MenuItem_UI_Button:new{body = "Byes", align = "center"},
+		MenuItem_UI_Button:new{body = "Yies", align = "center"},
+		MenuItem_UI_Button:new{body = "Myes", align = "center"},
+		MenuItem_UI_Button:new{body = "Mno", align = "center"},
+		MenuItem_UI_Button:new{body = "Nuhuh", align = "center"},
+		MenuItem_UI_Button:new{body = "Rno", align = "center"},
+		MenuItem_UI_Button:new{body = "Noo", align = "center"},
 	},
 }
 
@@ -330,7 +338,7 @@ menus.ServerBowser = Menu:new{
 	
 	on_draw = function(self, v)
 		if self.loading then
-			DrawSpinner()
+			DrawSpinner(FU * 160, FU * 100)
 		end
 	end,
 	
@@ -354,12 +362,19 @@ menus.ServerBowser = Menu:new{
 		end
 		
 		local function handleResponseError(response)
-			if not response then
+			if not response or not response.body then
 				ShowPopup("Server Bowser", "Failed to fetch from HTTP.\nPlease try again.")
+				
+				--does "all" combine all rooms?
+				--maybe it's srb2's fault that it doesn't display all rooms sometimes
+-- 				for i, v in pairs(response) do
+-- 					print(i, v)
+-- 				end
 				return
 			end
 			
 			if response.message then
+				ShowPopup("Server Bowser", "Failed to fetch from HTTP.\n"..response.message.."\nPlease try again.")
 				print("error:", response.message)
 				return
 			end
@@ -418,7 +433,8 @@ menus.ServerBowser = Menu:new{
 				
 				for i, server in ipairs(servs) do
 					table.insert(self.items, MenuItem_Button:new{label = server.name,
-						spacing = FU * 2, action = connect, ms_server = server})
+						spacing = FU * 2, action = connect, ms_server = server,
+						force_lowercase = true})
 				end
 				
 				self:updateItems()
@@ -463,8 +479,6 @@ menus.ServerBowser = Menu:new{
 				end
 				
 				state.line_num = $ + 1
-				
--- 				print(line)
 			end
 			
 			self.items = {
@@ -472,20 +486,24 @@ menus.ServerBowser = Menu:new{
 				
 				MenuItem_Box:new{width = FU * 280, height = FU * 54, spacing = FU * 4,
 					align = "center",
-					level_title_label = MenuItem_Text:new{scale = FU / 2},
+					level_title_label = MenuItem_Text:new{scale = FU / 2, force_lowercase = true},
 					on_draw = function(box, x, y, width, height)
 						local info = self.items[self.selection]
 						
 						if not info then return end
 						
+						local padding = FU * 8
+						
+						box.level_title_label.parent_width = width - padding * 2
 						box.level_title_label.label = info.ms_desc
-						box.level_title_label:draw(x + FU * 8, y + FU * 8 - FU)
+						box.level_title_label:draw(x + padding, y + padding - FU)
 					end},
 			}
 			
 			for i, v in ipairs(rooms) do
 				table.insert(self.items, MenuItem_Button:new{label = v.name,
-					spacing = FU * 2, ms_id = v.id, ms_desc = v.desc, action = get_servers, desc = (v.name == "All" and "The \"All\" room may not show all servers." or "Room ID: "..v.id)})
+					spacing = FU * 2, ms_id = v.id, ms_desc = v.desc, action = get_servers,
+					desc = (v.name == "All" and "The \"All\" room may not show all servers." or "Room ID: "..v.id)})
 			end
 			
 			self:updateItems()
