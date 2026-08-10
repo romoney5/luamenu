@@ -28,6 +28,7 @@ local menu_enter_anim = FU
 local menu_exit_anim = FU
 
 local keyHold = {}
+local keyHold_lock = {}
 
 local cache = {}
 
@@ -825,7 +826,7 @@ function MenuItem_UI_Button:draw(x, y)
 	
 	if self.keys then
 		for i, key in ipairs(self.keys) do
-			if keyHold[key] then
+			if keyHold[key] and not keyHold_lock[key] then
 				keyheld = true
 				
 				break
@@ -999,6 +1000,8 @@ local function GetState()
 end
 
 local function Input(key)
+	if not gks_luamenu then return end
+	
 	local name = key.name:lower()
 	local state = GetState()
 	
@@ -1086,6 +1089,8 @@ local function Input(key)
 	end
 	
 	if name == "enter" or name == "left arrow" or name == "right arrow" then
+		keyHold_lock[name] = true
+		
 		for i, item in ipairs(menu.items) do
 			if i == menu.selection then
 				item:activate(name == "left arrow" and -1 or 1)
@@ -1104,6 +1109,7 @@ addHook("KeyUp", function(key)
 	local name = key.name:lower()
 	
 	keyHold[name] = nil
+	keyHold_lock[name] = nil
 end)
 
 local mouse_pressed = false
@@ -1111,6 +1117,8 @@ local mouse_drag = {x = 0, y = 0, dragging = false, start_scroll = 0, updates = 
 loadfile("MenuData.lua")(menus, v)
 
 local function Drawer(drawer, player)
+	if not gks_luamenu then return end
+	
 -- 	local serverlistcount = #serverlist
 -- 	print(serverlistcount, servernode)
 	if not menuactive then return end
