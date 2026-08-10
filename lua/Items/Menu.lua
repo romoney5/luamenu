@@ -85,8 +85,6 @@ end
 
 function Menu:updateScroll()
 	local mx, my = ScreenToDisplay(input.getCursorPosition())
--- 	v.drawString(20, 10, (mx / FU).." "..(my / FU))
--- 	v.drawString(20, 20, v.width())
 	
 	if (mouse.buttons & MB_BUTTON1) and not current_popup then
 		--hack to stop initial positions from messing up the drag
@@ -159,11 +157,11 @@ function Menu:updateScroll()
 	end
 	
 	if (mouse.buttons & MB_SCROLLDOWN) then
-		self.scroll_vel = $ + FU / 6
+		self.scroll_vel = min(max($, 0) + FU / 3, FU * 4)
 	end
 	
 	if (mouse.buttons & MB_SCROLLUP) then
-		self.scroll_vel = $ - FU / 6
+		self.scroll_vel = max(min($, 0) - FU / 3, -FU * 4)
 	end
 	
 	local total_height = self:getYPositionAt(#self.items + 1)
@@ -188,6 +186,14 @@ function Menu:updateScroll()
 		self.dest_scroll = self.scroll
 		self.scroll_vel = max(abs($) - v.renderdeltatics() / 5, 0) * ($ < 0 and -1 or 1)
 	end
+	
+	if cv_luamenu_anims.value then
+		self.dest_scroll_time = min($ + v.renderdeltatics() / 5, FU)
+	else
+		self.dest_scroll_time = FU
+	end
+	
+	self.scroll = ease.outquad(self.dest_scroll_time, self.dest_scroll_origin, self.dest_scroll)
 	
 	--[[
 	v.drawScaled(mx, my, FU, cachePatch("M_CURSOR"))
@@ -238,14 +244,6 @@ function Menu:draw()
 	if self.show_version and cv_luamenu_showversion.value then
 		v.drawString(0 + FU * 8, FU * 200 - FU * 8 - FU * 8, VERSIONSTRING.." luamenu", V_TRANSLUCENT|V_ALLOWLOWERCASE|V_SNAPTOLEFT|V_SNAPTOBOTTOM, "thin-fixed")
 	end
-	
-	if cv_luamenu_anims.value then
-		self.dest_scroll_time = min($ + FU / 20, FU)
-	else
-		self.dest_scroll_time = FU
-	end
-	
-	self.scroll = ease.outquad(self.dest_scroll_time, self.dest_scroll_origin, self.dest_scroll)
 	
 	y = $ - self.scroll
 	

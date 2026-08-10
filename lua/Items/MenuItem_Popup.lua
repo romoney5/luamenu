@@ -65,6 +65,12 @@ function MenuItem_Popup:draw(x, y)
 	end
 end
 
+function MenuItem_Popup:close()
+	if current_popup == self then
+		current_popup = nil
+	end
+end
+
 function ShowPopup(title, message, buttons)
 	local popup = MenuItem_Popup:new{title = title, body = message,
 		buttons = {},

@@ -16,6 +16,13 @@ function MenuItem_Button:new(a)
 end
 
 function MenuItem_Button:draw(x, y)
+	local _, align_string, factor = self:getAlignment()
+	local width, height = self:getBounds()
+	local align_x = FixedMul(FixedMul(width, factor), self.scale)
+	width = self.parent.width
+	height = $ + min(FU * 2, self.spacing)
+	v.drawFixedFill(x + align_x - FU, y - FU, width + FU * 2, height + FU * 2, cv_menubgcolor.value) --top/bottom edges
+	
 	self.super.draw(self, x, y)
 	
 	--only designed to be used with left alignment
@@ -44,7 +51,17 @@ function MenuItem_Button:activate(increment)
 	end
 	
 	if self.cvar then
-		Banpyura.CV_ForceAddValue(self.cvar, increment)
+		--floats are special in various ways
+		if self.cvar.flags & CV_FLOAT then
+			local step = FU * 625 / 10000
+			local value = self.cvar.value + increment * step
+			
+			value = FixedDecimal(value, 4)
+			
+			Banpyura.CV_ForceSet(self.cvar, value)
+		else
+			Banpyura.CV_ForceAddValue(self.cvar, increment)
+		end
 	end
 	
 	if self.action then

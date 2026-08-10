@@ -112,7 +112,23 @@ function FixedDecimal(str, max)
 		max = 2
 	end
 	
-	return ("%."..max.."f"):format(str) --e.g. "%.4g"
+	local out = ("%."..max.."f"):format(str) --e.g. "%.4g"
+	
+	--die trailing zeros
+	--or leading zeros this naming scheme literally sucks WHY is it called leading when it's at the end
+	for i = out:len(), 1, -1 do
+		local char = out:sub(i, i)
+		
+		if char == "0" or char == "." then
+			out = out:sub(1, i - 1)
+		end
+		
+		if char ~= "0" then
+			break
+		end
+	end
+	
+	return out
 end
 
 function Menu_SetActive(active)

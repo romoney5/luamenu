@@ -995,3 +995,92 @@ menus.SP_MainMenu = Menu:new{
 		MenuItem_Button:new{label = "Quit Game", action = OnQuitGame},
 	},
 }
+
+local function DestroyRobots()
+	local mo = consoleplayer.realmo
+	
+	for mobj in mobjs.iterate() do
+		if mobj.health <= 0 or not (mobj.flags & (MF_ENEMY|MF_BOSS)) then
+			continue
+		end
+		
+		if mobj.type == MT_PLAYER then
+			continue
+		end
+		
+		P_KillMobj(mobj, mo, mo, 0)
+	end
+end
+
+--why not use ring racers/2.3's hwr2 backend
+menus.SP_PandorasBox = Menu:new{
+	anchor = {x = "center", y = "top"},
+	width = FU * 320 - FU * 50 * 2,
+	height = FU * 200 - FU * 20 * 2,
+	title = "PANDORA'S BOX",
+	
+	on_entry = function(self, old_menu)
+-- 		S_ChangeMusic("_title", false)
+	end,
+	
+	on_exit = function(self, old_menu)
+-- 		S_ChangeMusic("_title", false)
+	end,
+	
+	items = {
+		MenuItem_Button:new{label = "Mid-game add-ons...", desc = "Load add-ons mid-game", link = "AddonsMenu", spacing = FU * 2 + FU * 10},
+		
+		--TODO: these should use luamenu preferences
+		MenuItem_Button:new{label = "Rings", desc = "Set rings", cvar = CV_FindVar("dummyrings"), spacing = FU * 2},
+		MenuItem_Button:new{label = "Lives", desc = "Set lives", cvar = CV_FindVar("dummylives"), spacing = FU * 2},
+		MenuItem_Button:new{label = "Continues", desc = "Set continues", cvar = CV_FindVar("dummycontinues"), spacing = FU * 2 + FU * 10},
+		
+		MenuItem_Button:new{label = "Gravity", desc = "Change gravity", cvar = CV_FindVar("gravity"), spacing = FU * 2},
+		MenuItem_Button:new{label = "Throw Rings", desc = "Enable ringslinger", cvar = CV_FindVar("ringslinger"), spacing = FU * 2 + FU * 10},
+		
+		MenuItem_Button:new{label = "Enable Super form", desc = "", action = function(self)
+			--assume consoleplayer exists
+			if netgame or not consoleplayer then return end
+			
+			G_SetUsedCheats(false)
+			consoleplayer.charflags = $ | SF_SUPER
+			
+			ShowPopup(self.label, "You are now capable of turning super.\nRemember to get all the emeralds!")
+		end, spacing = FU * 2},
+		MenuItem_Button:new{label = "Get All Emeralds", desc = "", action = function(self)
+			--assume consoleplayer exists
+			if netgame or not consoleplayer then return end
+			
+			G_SetUsedCheats(false)
+			emeralds = EMERALD7 * 2 - 1
+			
+			ShowPopup(self.label, "You now have all 7 emeralds.\nUse them wisely.\nWith great power comes great ring drain.")
+		end, spacing = FU * 2},
+		MenuItem_Button:new{label = "Destroy All Robots", desc = "", action = function(self)
+			--assume consoleplayer exists
+			if netgame or not consoleplayer then return end
+			
+			ShowPopup(self.label, "Do you want to destroy all\nrobots in the current level?", {
+				{body = "No", keys = {"n", "escape"}, action = function(self)
+					return true
+				end},
+				{body = "Yes", keys = {"y", "enter"}, action = function(self)
+					return function()
+						G_SetUsedCheats(false)
+						current_popup:close()
+						
+						--for some cool reason P_DestroyRobots isn't exposed, so..
+						DestroyRobots()
+						
+						return true
+					end
+				end},
+			})
+		end, spacing = FU * 2},
+		
+		MenuItem_Button:new{label = "Ultimate Cheat", desc = "", action = function(self)
+			Menu_SetActive(false)
+			COM_BufInsertText(nil, "quit")
+		end, spacing = FU * 2},
+	},
+}

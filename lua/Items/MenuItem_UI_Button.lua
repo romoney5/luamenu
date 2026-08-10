@@ -63,7 +63,9 @@ function MenuItem_UI_Button:draw(x, y)
 				if next_action == true then
 					next_action = nil
 					
-					current_popup = nil
+					if current_popup then
+						current_popup:close()
+					end
 				end
 			end
 		end
