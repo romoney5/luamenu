@@ -1,11 +1,12 @@
 --Me?
 
-if not takis_luamenu then return end
+if not gks_luamenu then return end
 
 local menus = {}
 
-local cv_menucaps = CV_FindVar("menucaps")
-local cv_menucolor = CV_FindVar("menucolor")
+local cv_menucaps = CV_FindVar("menucaps") or {value = 1}
+local cv_menucolor = CV_FindVar("menucolor") or {value = V_YELLOWMAP}
+local cv_menubgcolor = CV_FindVar("menubgcolor") or {value = 159}
 
 local v = {}
 
@@ -337,16 +338,12 @@ function MenuItem_Text:new(a)
 end
 
 function MenuItem_Text:getFlags(selected)
-	local menucaps = 0--(cv_menucaps and not cv_menucaps.value) and V_ALLOWLOWERCASE or 0
+	local menucaps = 0--(not cv_menucaps.value) and V_ALLOWLOWERCASE or 0
 	local color = 0
 	
 	--use a custom highlight color if available, otherwise use yellow
 	if (self.parent and self.parent.selection == self.index) or selected then
-		color = V_YELLOWMAP
-		
-		if cv_menucolor then
-			color = cv_menucolor.value
-		end
+		color = cv_menucolor.value
 	end
 	
 	return menucaps|color
@@ -371,6 +368,11 @@ end
 
 local cache = {}
 
+--clear the cache once an addon is loaded
+addHook("AddonLoaded", function()
+	cache = {}
+end)
+
 function MenuItem_Text:draw(x, y)
 	local width, height = self:getBounds()
 	
@@ -388,7 +390,7 @@ function MenuItem_Text:draw(x, y)
 	local width = 0
 	local flags = self:getFlags(self.colored)
 	local col = v.getStringColormap(flags)
-	local uppercase = not (cv_menucaps and not cv_menucaps.value)
+	local uppercase = cv_menucaps.value
 	
 	--run twice; once to calculate the width, once to draw
 	for draw = 0, 1 do
@@ -498,15 +500,11 @@ function MenuItem_Header:new(a)
 end
 
 function MenuItem_Header:getFlags(selected)
-	local menucaps = (cv_menucaps and not cv_menucaps.value) and V_ALLOWLOWERCASE or 0
+	local menucaps = (not cv_menucaps.value) and V_ALLOWLOWERCASE or 0
 	local color = 0
 	
 	--use a custom highlight color if available, otherwise use yellow
-	color = V_YELLOWMAP
-	
-	if cv_menucolor then
-		color = cv_menucolor.value
-	end
+	color = cv_menucolor.value
 	
 	return menucaps|color
 end
@@ -531,15 +529,16 @@ end
 
 
 local function DrawSpikes(rot, ox, oy, scroll, flags)
-	local bg2 = v.cachePatch("RECATKFG2")
-	local bg = v.cachePatch("RECATKFG2", -rot + ANGLE_90)
+	local col = v.getColormap(nil, nil, "Menu_Translation_"..cv_menubgcolor.value - 2)
+	local bg2 = v.cachePatch("MENU_SPIKE")
+	local bg = v.cachePatch("MENU_SPIKE", -rot + ANGLE_90)
 	local dimension = bg2.height - 1
 	
 	for i = -2, FU * 400 / dimension / FU do
 		local factor = FixedMul(FU * dimension, FU * i + scroll)
 		local x = FixedMul(factor, cos(rot)) + ox
 		local y = FixedMul(factor, sin(rot)) + oy
-		v.drawScaled(x, y, FU, bg, flags)
+		v.drawScaled(x, y, FU, bg, flags, col)
 	end
 end
 

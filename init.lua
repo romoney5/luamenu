@@ -3,6 +3,8 @@ local directory = { "/",
 	"Class.lua",
 	"Menu.lua",
 	
+-- 	"TranslationTest.lua",
+	
 // 	--libraries
 // 	{ "libraries",
 // 		"fixed_decimal.lua",

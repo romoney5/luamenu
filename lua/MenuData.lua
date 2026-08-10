@@ -218,7 +218,8 @@ menus.OptionsMenu_Video = Menu:new{
 		MenuItem_Button:new{label = "Local Ping Display", cvar = CV_FindVar("showping"), spacing = FU * 2},
 		MenuItem_Button:new{label = "Show Player Names", cvar = CV_FindVar("seenames"), spacing = FU * 2},
 		MenuItem_Button:new{label = "Uppercase Menus", cvar = CV_FindVar("menucaps"), spacing = FU * 2},
-		MenuItem_Button:new{label = "Menu Color", cvar = CV_FindVar("menucolor"), spacing = FU * 2},
+		MenuItem_Button:new{label = "Menu Highlight Color", cvar = CV_FindVar("menucolor"), spacing = FU * 2},
+		MenuItem_Button:new{label = "Menu Background Color", cvar = CV_FindVar("menubgcolor"), spacing = FU * 2},
 		MenuItem_Button:new{label = "Screen Fades", cvar = CV_FindVar("wipes"), spacing = FU * 2}, --romoney5
 		
 		MenuItem_Header:new{label = "Console"},
@@ -291,7 +292,7 @@ menus.OptionsMenu_Network = Menu:new{
 	
 	items = {
 		MenuItem_Header:new{label = "General"},
-		MenuItem_Button:new{label = "Sound Effects", cvar = CV_FindVar("mindelay"), spacing = FU * 2},
+		MenuItem_Button:new{label = "Minimum Delay", cvar = CV_FindVar("mindelay"), spacing = FU * 2},
 		MenuItem_Button:new{label = "Gentleman's Delay", cvar = CV_FindVar("gentlemensdelay"), spacing = FU * 2},
 		MenuItem_Button:new{label = "Connection Timeout", cvar = CV_FindVar("nettimeout"), spacing = FU * 2},
 		MenuItem_Button:new{label = "Network Buffer", cvar = CV_FindVar("netticbuffer"), spacing = FU * 2},

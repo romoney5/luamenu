@@ -4,6 +4,8 @@
 
 local menus, v = ...
 
+--network stuff is always gonna involve some loading,
+--the user deserves a pretty loading spinner
 local function DrawSpinner()
 	local bg = v.cachePatch("MENU_LOAD1")
 	v.drawScaled(FU * 160, FU * 100, FU / 2, bg, V_50TRANS)
@@ -180,13 +182,13 @@ local function CL_ConnectToServer()
 	SL_ClearServerList(servernode)
 end
 
-local function serv_connect(ip)
+local function serv_connect(ip, port)
 	Menu_GotoLink("Sonikm")
 	
 	I_NetOpenSocket() --native
 	SetMultiplayer() --native
 	
-	servernode = I_NetMakeNode(ip) --native
+	servernode = I_NetMakeNodewPort(ip, port) --native
 	
 	CL_ConnectToServer()
 end
@@ -239,7 +241,7 @@ local function string_split(self, delimiter)
 	return result
 end
 
-COM_AddCommand("join", function(player, ip) serv_connect(ip) end, COM_LOCAL)
+COM_AddCommand("join", function(player, ip, port) serv_connect(ip, port) end, COM_LOCAL)
 
 --for slow internet (there is a cvar for this, use NUMBER timeout)
 HTTP.setDefaultTimeout(20)
@@ -289,10 +291,11 @@ menus.ServerBowser = Menu:new{
 		local function connect(button)
 			local server = button.ms_server
 -- 			COM_BufInsertText(nil, "connect "..server.ip.." "..server.port)
-			local ip = server.ip..":"..server.port
+			local ip = server.ip
+			local port = server.port
 -- 			ip = "10.0.0.242"
-			print("CONNECTING "..ip)
-			serv_connect(ip)
+			print("CONNECTING "..ip..", "..port)
+			serv_connect(ip, port)
 		end
 		
 		local function get_servers(button)
