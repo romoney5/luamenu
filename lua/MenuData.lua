@@ -211,6 +211,7 @@ menus.OptionsMenu_Luamenu = Menu:new{
 	items = {
 		MenuItem_Header:new{label = "Visual"},
 		MenuItem_Button:new{label = "Background Decorations", desc = "Show visual decorations in the background", cvar = CV_FindVar("luamenu_bgdecos"), spacing = FU * 2},
+		MenuItem_Button:new{label = "Animations", desc = "Enable animations when entering pages, hovering, etc.", cvar = CV_FindVar("luamenu_anims"), spacing = FU * 2},
 	},
 }
 

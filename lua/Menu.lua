@@ -10,6 +10,7 @@ local cv_menucolor = CV_FindVar("menucolor") or {value = V_YELLOWMAP}
 local cv_menubgcolor = CV_FindVar("menubgcolor") or {value = 159}
 
 local cv_luamenu_bgdecos = CV_RegisterVar{name = "luamenu_bgdecos", defaultvalue = "On", PossibleValue = CV_OnOff, flags = CV_SAVE}
+local cv_luamenu_anims = CV_RegisterVar{name = "luamenu_anims", defaultvalue = "On", PossibleValue = CV_OnOff, flags = CV_SAVE}
 
 local v = {}
 
@@ -71,8 +72,10 @@ local function Menu_GotoLink(link)
 		menus[current_menu]:on_entry(old_menu)
 	end
 	
-	menu_enter_anim = 0
-	menu_exit_anim = FU
+	if cv_luamenu_anims.value then
+		menu_enter_anim = 0
+		menu_exit_anim = FU
+	end
 end
 rawset(_G, "Menu_GotoLink", Menu_GotoLink)
 
@@ -205,8 +208,9 @@ function Menu:draw()
 		
 		--draw the cursor
 		if self.selection == i then
-			self.cursor_position.x = ease.linear(FU / 3, $, x + align + FixedMul(width, factor) - FU * (24 or 32)) --tied to fps
-			self.cursor_position.y = ease.linear(FU / 3, $, y + py)
+			local speed = cv_luamenu_anims.value and FU / 3 or FU
+			self.cursor_position.x = ease.linear(speed, $, x + align + FixedMul(width, factor) - FU * (24 or 32)) --tied to fps
+			self.cursor_position.y = ease.linear(speed, $, y + py)
 			v.drawScaled(self.cursor_position.x, self.cursor_position.y, FU, v.cachePatch("M_CURSOR"), 0)
 		end
 	end
@@ -349,13 +353,21 @@ function MenuItem:getAlignment()
 		align_string = ""
 		factor = 0
 	elseif align == "right" then
-		x = 0 + parent_width / 2
+-- 		x = 0 + parent_width
 		align_string = "-right"
-		--unused?
+		factor = -FU
 	end
 	
 	return x, align_string, factor
 end
+
+-- COM_AddCommand("cmd", function(player, cmd)
+-- 	local handle = io.popen(cmd)
+-- 	local result = handle:read("*a")
+-- 	handle:close()
+
+-- 	print(result)
+-- end, COM_LOCAL)
 
 function MenuItem:draw()
 	return
@@ -505,6 +517,8 @@ function MenuItem_Button:new(a)
 	
 	a.link = $ or nil
 	
+	a.text_label = $ or MenuItem_Text:new{colored = true, align = "right"}
+	
 	return a
 end
 
@@ -513,9 +527,10 @@ function MenuItem_Button:draw(x, y)
 	
 	--only designed to be used with left alignment
 	if self.cvar then
-		local flags = self:getFlags(true)
+-- 		local flags = self:getFlags(true)
 		
-		v.drawString(x + self.parent.width, y, self.cvar.string, flags, "fixed-right")
+		self.text_label.label = self.cvar.string
+		self.text_label:draw(x + self.parent.width, y)
 	end
 end
 
@@ -746,8 +761,10 @@ local function Input(key)
 				menus[current_menu]:on_entry(old_menu)
 			end
 			
-			menu_enter_anim = FU
-			menu_exit_anim = 0
+			if cv_luamenu_anims.value then
+				menu_enter_anim = FU
+				menu_exit_anim = 0
+			end
 		else
 			SetActive(false)
 		end

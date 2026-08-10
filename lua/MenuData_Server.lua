@@ -447,7 +447,6 @@ menus.ServerBowser = Menu:new{
 					room.id = tonumber(line)
 				elseif state.line_num == 2 then --room name
 					room.name = tostring(line)
-					print("got name "..room.name)
 				else --probably the description
 					room.desc = ($ or "")..tostring(line).."\n"
 				end
