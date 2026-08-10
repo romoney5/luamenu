@@ -1358,7 +1358,8 @@ local function Input(key)
 		input.setTextInputMode(true)
 	end
 	
-	if key.num == input.gameControlToKeyNum(GC_CONSOLE) then
+	if key.num == input.gameControlToKeyNum(GC_CONSOLE)
+	or key.num == input.gameControl2ToKeyNum(GC_CONSOLE) then
 		return
 	end
 	

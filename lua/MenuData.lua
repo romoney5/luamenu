@@ -255,6 +255,11 @@ menus.OptionsMenu_Luamenu = Menu:new{
 		MenuItem_Button:new{label = "Background Decorations", desc = "Show visual decorations in the background", cvar = CV_FindVar("luamenu_bgdecos"), spacing = FU * 2},
 		MenuItem_Button:new{label = "Animations", desc = "Enable animations when entering pages, hovering, etc.", cvar = CV_FindVar("luamenu_anims"), spacing = FU * 2},
 		MenuItem_Button:new{label = "Tooltips", desc = "Show short descriptions of menu options at the bottom", cvar = CV_FindVar("luamenu_tooltips"), spacing = FU * 2},
+		
+		MenuItem_Header:new{label = "Personalization"},
+		MenuItem_Button:new{label = "Uppercase Menus", desc = "Force uppercase text in menus", cvar = CV_FindVar("menucaps"), spacing = FU * 2}, --srb2-edit
+		MenuItem_Button:new{label = "Highlight Color", desc = "Change the color of highlighted text", cvar = CV_FindVar("menucolor"), spacing = FU * 2}, --srb2-edit, romoney5
+		MenuItem_Button:new{label = "Background Color", desc = "Change the color of backgrounds", cvar = CV_FindVar("menubgcolor"), spacing = FU * 2}, --gks edit
 		MenuItem_Slider:new{label = "Rounded Corners", desc = "Enable rounded corners on boxes", slider_step = FU / 4, cvar = CV_FindVar("luamenu_rounded"), spacing = FU * 2},
 	},
 }
@@ -363,9 +368,9 @@ menus.OptionsMenu_Video = Menu:new{
 		MenuItem_Button:new{label = "Show Powerups", desc = "Show active powerups at the bottom-right corner", cvar = CV_FindVar("powerupdisplay"), spacing = FU * 2},
 		MenuItem_Button:new{label = "Local Ping Display", desc = "Show ping at the bottom-right corner", cvar = CV_FindVar("showping"), spacing = FU * 2},
 		MenuItem_Button:new{label = "Show Player Names", desc = "Show player names when looking at them", cvar = CV_FindVar("seenames"), spacing = FU * 2},
-		MenuItem_Button:new{label = "Uppercase Menus", desc = "Force uppercase text in menus", cvar = CV_FindVar("menucaps"), spacing = FU * 2}, --srb2-edit
-		MenuItem_Button:new{label = "Menu Highlight Color", desc = "Change the color of highlighted text", cvar = CV_FindVar("menucolor"), spacing = FU * 2}, --srb2-edit, romoney5
-		MenuItem_Button:new{label = "Menu Background Color", desc = "Change the color of backgrounds", cvar = CV_FindVar("menubgcolor"), spacing = FU * 2}, --gks edit
+-- 		MenuItem_Button:new{label = "Uppercase Menus", desc = "Force uppercase text in menus", cvar = CV_FindVar("menucaps"), spacing = FU * 2}, --srb2-edit
+-- 		MenuItem_Button:new{label = "Menu Highlight Color", desc = "Change the color of highlighted text", cvar = CV_FindVar("menucolor"), spacing = FU * 2}, --srb2-edit, romoney5
+-- 		MenuItem_Button:new{label = "Menu Background Color", desc = "Change the color of backgrounds", cvar = CV_FindVar("menubgcolor"), spacing = FU * 2}, --gks edit
 		MenuItem_Button:new{label = "Screen Fades", desc = "Enable screen transitions", cvar = CV_FindVar("wipes"), spacing = FU * 2}, --romoney5
 		
 		MenuItem_Header:new{label = "Console"},
