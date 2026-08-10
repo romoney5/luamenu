@@ -311,9 +311,9 @@ menus.OptionsMenu_Banpyura = Menu:new{
 		MenuItem_Header:new{label = "Heads-Up Display"},
 		MenuItem_Button:new{label = "Screen Fades", desc = "Enable screen transitions", cvar = CV_FindVar("wipes"), spacing = FU * 2}, --romoney5
 		MenuItem_Button:new{label = "Screen Flashes", desc = "Enable screen flashes", cvar = CV_FindVar("flashes"), spacing = FU * 2},
-		MenuItem_Button:new{label = "Uppercase Menus", desc = "Force uppercase text in menus", cvar = CV_FindVar("menucaps"), spacing = FU * 2}, --banpyura
-		MenuItem_Button:new{label = "Menu Highlight Color", desc = "Change the color of highlighted text", cvar = CV_FindVar("menucolor"), spacing = FU * 2}, --srb2-edit, romoney5
-		MenuItem_Button:new{label = "Menu Background Color", desc = "Change the color of backgrounds", cvar = CV_FindVar("menubgcolor"), spacing = FU * 2}, --banpyura
+-- 		MenuItem_Button:new{label = "Uppercase Menus", desc = "Force uppercase text in menus", cvar = CV_FindVar("menucaps"), spacing = FU * 2}, --banpyura
+-- 		MenuItem_Button:new{label = "Menu Highlight Color", desc = "Change the color of highlighted text", cvar = CV_FindVar("menucolor"), spacing = FU * 2}, --srb2-edit, romoney5
+-- 		MenuItem_Button:new{label = "Menu Background Color", desc = "Change the color of backgrounds", cvar = CV_FindVar("menubgcolor"), spacing = FU * 2}, --banpyura
 		
 		MenuItem_Header:new{label = "Level"},
 -- 		MenuItem_Button:new{label = "Pitch/Roll Object Rotation", desc = "Rotate objects on slopes", cvar = CV_FindVar("pitchroll-tation"), spacing = FU * 2}, --srb2-edit, romoney5
@@ -370,16 +370,33 @@ menus.OptionsMenu_Luamenu = Menu:new{
 	height = FU * 200 - FU * 20 * 2,
 	title = "MENU OPTIONS",
 	
+	show_version = true,
+	
 	items = {
 		MenuItem_Header:new{label = "Visual"},
 		MenuItem_Button:new{label = "Background Decorations", desc = "Show visual decorations in the background", cvar = CV_FindVar("luamenu_bgdecos"), spacing = FU * 2},
-		MenuItem_Button:new{label = "Animations", desc = "Enable animations when entering pages, hovering, etc.", cvar = CV_FindVar("luamenu_anims"), spacing = FU * 2},
+		MenuItem_Button:new{label = "Animations", desc = "Enable animations when entering pages, scrolling, etc.", cvar = CV_FindVar("luamenu_anims"), spacing = FU * 2},
 		MenuItem_Button:new{label = "Tooltips", desc = "Show short descriptions of menu options at the bottom", cvar = CV_FindVar("luamenu_tooltips"), spacing = FU * 2},
+		MenuItem_Button:new{label = "Show Version String", desc = "Show the game version in certain menus", cvar = CV_FindVar("luamenu_showversion"), spacing = FU * 2},
 		
 		MenuItem_Header:new{label = "Personalization"},
--- 		MenuItem_Button:new{label = "Uppercase Menus", desc = "Force uppercase text in menus", cvar = CV_FindVar("menucaps"), spacing = FU * 2}, --srb2-edit
--- 		MenuItem_Button:new{label = "Highlight Color", desc = "Change the color of highlighted text", cvar = CV_FindVar("menucolor"), spacing = FU * 2}, --srb2-edit, romoney5
--- 		MenuItem_Button:new{label = "Background Color", desc = "Change the color of backgrounds", cvar = CV_FindVar("menubgcolor"), spacing = FU * 2}, --gks edit
+		
+		MenuItem_Box:new{width = FU * 280, height = FU * 26, spacing = FU * 4,
+			align = "center",
+			level_title_label = MenuItem_Text:new{scale = FU, force_lowercase = false,
+				colored = true, label = "Sample textbox."},
+			
+			on_draw = function(box, x, y, width, height)
+				local padding = FU * 8
+				
+				box.level_title_label.parent_width = width - padding * 2
+				box.level_title_label:draw(x + padding, y + padding - FU)
+			end
+		},
+		
+		MenuItem_Button:new{label = "Uppercase Menus", desc = "Force uppercase text in menus", cvar = CV_FindVar("menucaps"), spacing = FU * 2}, --srb2-edit
+		MenuItem_Button:new{label = "Highlight Color", desc = "Change the color of highlighted text", cvar = CV_FindVar("menucolor"), spacing = FU * 2}, --srb2-edit, romoney5
+		MenuItem_Button:new{label = "Background Color", desc = "Change the color of backgrounds", cvar = CV_FindVar("menubgcolor"), spacing = FU * 2}, --gks edit
 		MenuItem_Button:new{label = "Stylized Sliders", desc = "Enable rounded sliders", cvar = CV_FindVar("luamenu_sliders"), spacing = FU * 2},
 		MenuItem_Slider:new{label = "Rounded Corners", desc = "Change the size of rounded corners on boxes", slider_step = FU / 4, cvar = CV_FindVar("luamenu_rounded"), spacing = FU * 2},
 		
@@ -390,8 +407,7 @@ menus.OptionsMenu_Luamenu = Menu:new{
 					return true
 				end},
 				{body = "Disable", keys = {"y", "enter"}, width = FU * 65, action = function(self)
-					gks_luamenu = false
-					CV_StealthSet(CV_FindVar("luamenu"), 0)
+					CV_Set(cv_luamenu, 0)
 					
 					return true
 				end},
@@ -412,15 +428,84 @@ menus.OptionsMenu_Luamenu = Menu:new{
 	},
 }]]
 
+local function GetControls(control, secondary)
+	local controls
+	local control_function = input.gameControlToKeyNum
+	
+	if secondary then
+		control_function = input.gameControl2ToKeyNum
+	end
+	
+	controls = {control_function(control)}
+	
+	for i, v in ipairs(controls) do
+		if v == 0 then
+			controls[i] = nil
+			
+			continue
+		end
+	end
+	
+	return controls
+end
+
+local function ControlNumsToNames(controls)
+	for i, v in ipairs(controls) do
+		controls[i] = input.keyNumToName(v)
+	end
+end
+
 local function ChangeControl(button)
-	ShowPopup(button.label, "Input a new key for \""..button.label.."\"...")
+	local popup = ShowPopup(button.label, "Input a new key for \""..button.label.."\"...",
+		{{body = "Cancel", keys = {"escape"}, action = function(self) return true end}})
+	
+	function popup:on_input(key, name)
+		if name == self.buttons[1].keys[1] then return end
+		
+		local secondary = button.parent and button.parent.secondary
+		local controls = GetControls(constants["GC_"..button.control], secondary)
+		
+		function next_action()
+			COM_BufInsertText(nil, ("setcontrol%s \"%s\" \"%s\" \"%s\""):format(secondary and "2" or "", button.control, controls[1] or name, name))
+		end
+		
+		S_StartSound(nil, sfx_strpst)
+		current_popup = nil
+		
+		return true
+	end
+end
+
+local function DrawControl(self, x, y)
+	local controls = GetControls(constants["GC_"..self.control], self.parent and self.parent.secondary)
+	ControlNumsToNames(controls)
+	
+	--set the label
+	self.text_label.label = table.concat(controls, " and ")
+	
+	if not #controls then
+		self.text_label.label = "---"
+	end
+end
+
+local function InputControl(self, key, name)
+	if name == "backspace" then
+		local secondary = self.parent and self.parent.secondary
+		
+		function next_action()
+			COM_BufInsertText(nil, ("setcontrol%s \"%s\" \"%s\" \"%s\""):format(secondary and "2" or "", self.control, "", ""))
+		end
+		
+		S_StartSound(nil, sfx_shldls)
+	end
 end
 
 menus.OptionsMenu_P1Controls = Menu:new{
 	anchor = {x = "center", y = "top"},
 	width = FU * 320 - FU * 50 * 2,
 	height = FU * 200 - FU * 20 * 2,
-	title = "CONTROL SETUP",--"AY BOY I JUST GOT THE NEW iPHONE",--\nIT EVEN GOT AN APP TO DESTROY ALL OPPS",
+	title = "CONTROL SETUP",
+-- 	title = "AY BOY I JUST GOT THE NEW iPHONE\nIT EVEN GOT AN APP TO DESTROY ALL OPPS",
 	
 	items = {
 		MenuItem_Button:new{label = "Control Configuration...", desc = "Change keyboard controls", link = new_menu("OptionsMenu_P1Controls_Keyboard", Menu:new{
@@ -428,10 +513,10 @@ menus.OptionsMenu_P1Controls = Menu:new{
 			title = "CONTROL SETUP",
 			
 			items = {
-				MenuItem_Header:new{label = "'''''''''''''''''''''''''''"},
-				MenuItem_Header:new{label = "digo"},
+				MenuItem_Text:new{label = "Press Enter to change, Backspace to clear", canSelect = function() return false end, align = "center"},
+				
 				MenuItem_Header:new{label = "Movement"},
-				MenuItem_Button:new{label = "Move Forward", desc = "Move character forward", action = ChangeControl, spacing = FU * 2},
+				MenuItem_Button:new{label = "Move Forward", desc = "Move character forward", action = ChangeControl, on_draw = DrawControl, onKeyInput = InputControl, control = "FORWARD", spacing = FU * 2},
 			},
 		}), spacing = FU * 2},
 		MenuItem_Button:new{label = "Mouse Options...", desc = "Change mouse settings", link = new_menu("OptionsMenu_P1Controls_Mouse", Menu:new{

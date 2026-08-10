@@ -9,6 +9,11 @@ _G.gks_luamenu = true
 
 cv_luamenu = CV_RegisterVar{name = "luamenu", defaultvalue = "On", PossibleValue = CV_OnOff, flags = CV_SAVE|CV_CALL, func = function(self)
 	_G.gks_luamenu = self.value and true or false
+	
+	--make sure everything is set back to normal
+	if not self.value then
+		Menu_SetActive(false)
+	end
 end}
 
 menus = {}
@@ -21,6 +26,7 @@ cv_menubgcolor = CV_FindVar("menubgcolor") or {value = 159}
 cv_luamenu_bgdecos = CV_RegisterVar{name = "luamenu_bgdecos", defaultvalue = "On", PossibleValue = CV_OnOff, flags = CV_SAVE}
 cv_luamenu_anims = CV_RegisterVar{name = "luamenu_anims", defaultvalue = "On", PossibleValue = CV_OnOff, flags = CV_SAVE}
 cv_luamenu_tooltips = CV_RegisterVar{name = "luamenu_tooltips", defaultvalue = "On", PossibleValue = CV_OnOff, flags = CV_SAVE}
+cv_luamenu_showversion = CV_RegisterVar{name = "luamenu_showversion", defaultvalue = "On", PossibleValue = CV_OnOff, flags = CV_SAVE}
 cv_luamenu_rounded = CV_RegisterVar{name = "luamenu_rounded", defaultvalue = "1", PossibleValue = {MIN = 0, MAX = FU * 4}, flags = CV_SAVE|CV_FLOAT}
 cv_luamenu_sliders = CV_RegisterVar{name = "luamenu_sliders", defaultvalue = "On", PossibleValue = CV_OnOff, flags = CV_SAVE}
 
@@ -111,7 +117,7 @@ end
 
 function Menu_GotoLink(link)
 	if not menus[link] then
-		ShowPopup("Menu_GotoLink", ("Could not find menu link \"%s\".\n\nThis menu may be unfinished."):format(tostring(link)))
+		ShowPopup("Menu_GotoLink", ("Could not find menu link \"%s\".\n\nThis menu may be unimplemented."):format(tostring(link)))
 		return
 	end
 
@@ -256,7 +262,13 @@ function Menu:draw()
 	--draw header
 	if self.title_label then
 		self.title_label.label = self.title
-		self.title_label:draw(x, y - FU * 35)
+		if cv_luamenu_anims.value then
+			self.title_label.scale = max(FU - self.scroll / 512, 0)
+			self.title_label:draw(x, y - FU * 35 + self.scroll / 4)
+		else
+			self.title_label.scale = FU
+			self.title_label:draw(x, y - FU * 35)
+		end
 	end
 	
 	--draw all items
@@ -629,8 +641,9 @@ function MenuItem_Button:new(a)
 	a.cvar = $ or nil
 	
 	a.action = $ or nil
+	a.on_draw = $ or nil
 	
-	a.text_label = $ or MenuItem_Text:new{colored = true, align = "right"}
+	a.text_label = $ or MenuItem_Text:new{colored = true, align = "right", label = ""}
 	
 	return a
 end
@@ -656,10 +669,13 @@ end
 function MenuItem_Button:draw(x, y)
 	self.super.draw(self, x, y)
 	
+	if self.on_draw then
+		self:on_draw(x, y)
+	end
+	
 	--only designed to be used with left alignment
 	if self.cvar then
 		self.text_label.label = self.cvar.string
-		self.text_label:draw(x + self.parent.width, y)
 		
 		--TODO: function
 		if self.parent and self.parent.selection == self.index then
@@ -668,6 +684,8 @@ function MenuItem_Button:draw(x, y)
 			self.text_label:drawArrows(x + self.parent.width, y, col)
 		end
 	end
+	
+	self.text_label:draw(x + self.parent.width, y)
 end
 
 function MenuItem_Button:activate(increment)
@@ -1169,6 +1187,7 @@ function MenuItem_Popup:new(a)
 	a.height = $ or FU * 100
 	
 	a.on_draw = $ or nil
+	a.on_input = $ or nil
 	
 	a.open_anim = $ or 0
 	
@@ -1215,6 +1234,10 @@ function MenuItem_Popup:draw(x, y)
 			local button_x = ease.linear(FU * i / (num_buttons + 1), x, x + width)
 			v:draw(button_x, y + self.height - v.height / 2)
 		end
+		
+		if self.on_draw then
+			self:on_draw(x, y, width, height)
+		end
 	end
 end
 
@@ -1234,6 +1257,8 @@ function ShowPopup(title, message, buttons)
 	end
 	
 	current_popup = popup
+	
+	return popup
 end
 
 
@@ -1275,9 +1300,10 @@ local function Input(key)
 	if menuactive and current_popup then
 		--dismiss the popup
 		input.setTextInputMode(false)
--- 		if name == "escape" then
--- 			current_popup = nil
--- 		end
+		
+		if current_popup.on_input and current_popup:on_input(key, name) then
+			return true
+		end
 		
 		return
 	end
@@ -1378,8 +1404,10 @@ local function Input(key)
 		input.setTextInputMode(true)
 	end
 	
-	if key.num == input.gameControlToKeyNum(GC_CONSOLE)
-	or key.num == input.gameControl2ToKeyNum(GC_CONSOLE) then
+	local console1, console2 = input.gameControlToKeyNum(GC_CONSOLE)
+	
+	if key.num == console1 or key.num == console2 then
+-- 	or key.num == input.gameControl2ToKeyNum(GC_CONSOLE) then
 		return
 	end
 	
@@ -1574,7 +1602,7 @@ local function Drawer(drawer, player)
 	end
 	
 	--to differentiate the two
-	if menu.show_version then
+	if menu.show_version and cv_luamenu_showversion.value then
 		v.drawString(0 + FU * 8, FU * 200 - FU * 8 - FU * 8, VERSIONSTRING.." luamenu", V_TRANSLUCENT|V_ALLOWLOWERCASE|V_SNAPTOLEFT|V_SNAPTOBOTTOM, "thin-fixed")
 	end
 	
