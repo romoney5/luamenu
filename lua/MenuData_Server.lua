@@ -247,32 +247,57 @@ menus.Sonikm = Menu:new{
 	end,
 	
 	items = {
+		--top box
 		MenuItem_Box:new{width = FU * 300, height = FU * 54,
 			x_offset = 0, align = "center",
 			title_label = MenuItem_Text:new{colored = false},
+			subtitle_label = MenuItem_Text:new{colored = false, scale = FU * 2 / 3},
+			
 			on_draw = function(self, x, y, width, height)
 				local menu = self.parent
 				
 				if cl_mode == CL_SEARCHING then
-					self.title_label.label = "Connecting to...\n"..viewip
+					self.title_label.label = "Connecting to..."
+					self.subtitle_label.label = viewip
 					
 					self.title_label:draw(x + FU * 4, y + FU * 4)
+					self.subtitle_label:draw(x + FU * 4, y + FU * 4 + FU * 10)
 					
 					DrawSpinner()
 				elseif cl_mode == CL_VIEWSERVER then
-					v.drawString(0, 10, serverlist[joinnode].info.servername, V_ALLOWLOWERCASE)
-					v.drawString(0, 20, serverlist[joinnode].info.maptitle, V_ALLOWLOWERCASE)
+					self.title_label.label = serverlist[joinnode].info.servername
+					self.subtitle_label.label = serverlist[joinnode].info.maptitle
 					
-					local y = 30
+					self.title_label:draw(x + FU * 4, y + FU * 4)
+					self.subtitle_label:draw(x + FU * 4, y + FU * 4 + FU * 10)
+				end
+			end
+		},
+		
+		--top box
+		MenuItem_Box:new{width = FU * 300, height = FU * 100,
+			x_offset = 0, y_offset = FU * 5, align = "center",
+-- 			title_label = MenuItem_Text:new{colored = false},
+-- 			subtitle_label = MenuItem_Text:new{colored = false, scale = FU * 2 / 3},
+			visible = false,
+			
+			on_draw = function(self, x, y, width, height)
+				local menu = self.parent
+				
+				if cl_mode == CL_SEARCHING then
+					self.visible = false
+				elseif cl_mode == CL_VIEWSERVER then
+					self.visible = true
 					
 					for i = 0, #playerinfo do
 						if playerinfo[i] then
-							v.drawString(0, y + i * 10, i..": "..playerinfo[i].name, V_ALLOWLOWERCASE)
+							v.drawString(x + FU * 4, y + (i - 1) * FU * 10 + FU * 4, i..": "..playerinfo[i].name, V_ALLOWLOWERCASE, "fixed")
 						end
 					end
 					
 				end
-			end},
+			end
+		},
 	},
 }
 

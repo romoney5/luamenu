@@ -25,3 +25,5 @@ local function load(dir, path)
 end
 
 load(directory, "")
+
+print("Luamenu by romoney5")

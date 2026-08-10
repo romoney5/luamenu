@@ -1,12 +1,15 @@
 --Me?
 
-if not gks_luamenu then return end
+if not gks_luamenu_supported then return end
+gks_luamenu = true
 
 local menus = {}
 
 local cv_menucaps = CV_FindVar("menucaps") or {value = 1}
 local cv_menucolor = CV_FindVar("menucolor") or {value = V_YELLOWMAP}
 local cv_menubgcolor = CV_FindVar("menubgcolor") or {value = 159}
+
+local cv_luamenu_bgdecos = CV_RegisterVar{name = "luamenu_bgdecos", defaultvalue = "On", PossibleValue = CV_OnOff, flags = CV_SAVE}
 
 local v = {}
 
@@ -45,7 +48,11 @@ end
 rawset(_G, "ShowPopup", ShowPopup)
 
 local function Menu_GotoLink(link)
-	assert(menus[link], ("MenuItem_Button:activate: Could not resolve menu link \"%s\"."):format(tostring(link)))
+	if not menus[link] then
+		ShowPopup("Menu_GotoLink", ("Could not resolve menu link \"%s\"."):format(tostring(link)))
+		return
+	end
+-- 	assert(menus[link], ("Menu_GotoLink: Could not resolve menu link \"%s\"."):format(tostring(link)))
 
 	local old_menu = current_menu
 
@@ -93,6 +100,9 @@ function Menu:new(a)
 	a.on_exit = $ or nil
 	
 	a.parent = $ or nil
+	
+	a.title = $ or ""
+	a.title_label = $ or MenuItem_Text:new{font = "MENU_FONT_HEADER_", label = a.title, align = "center"}
 	
 	a:updateItems()
 	
@@ -167,6 +177,11 @@ end
 function Menu:draw()
 	local x, y = self:getPosition()
 	y = $ - self.scroll
+	
+	if self.title_label then
+		self.title_label.label = self.title
+		self.title_label:draw(x, y - FU * 35)
+	end
 	
 	for i, item in ipairs(self.items) do
 		local py = self:getYPositionAt(i)
@@ -269,8 +284,8 @@ function MenuItem:new(a)
 	a.pre_spacing = $ or 0
 	a.spacing = $ or 0
 	
-	a.visible = $
-	if a.visible == nil then a.visible = true end
+-- 	a.visible = $
+-- 	if a.visible == nil then a.visible = true end
 	
 	a.align_string = $ or ""
 	
@@ -333,6 +348,8 @@ function MenuItem_Text:new(a)
 	setmetatable(a, self)
 	
 	a.label = $ or "Button"
+	a.font = $ or "STCFN"
+	a.scale = $ or FU
 	a.link = $ or nil
 	
 	a.colored = $ or false
@@ -390,6 +407,7 @@ function MenuItem_Text:draw(x, y)
 	end
 
 	local label = self.label
+	local scale = self.scale
 	local width = 0
 	local flags = self:getFlags(self.colored)
 	local col = v.getStringColormap(flags)
@@ -410,7 +428,7 @@ function MenuItem_Text:draw(x, y)
 			
 			local code = char:byte()
 			
-			local patchname = "STCFN"..ZeroNumber(code, 3)
+			local patchname = self.font..ZeroNumber(code, 3)
 			local cacheexists = cache[patchname]
 			
 			if cacheexists == nil or (cacheexists and not cacheexists.valid) then
@@ -426,12 +444,12 @@ function MenuItem_Text:draw(x, y)
 				local patch = cache[patchname]
 				
 				if draw then
-					v.drawScaled(x + width, y + lines * FU * 10, FU, patch, 0, col)
+					v.drawScaled(x + width, y + lines * scale * 10, scale, patch, 0, col)
 				end
 				
-				width = $ + FU * patch.width
+				width = $ + scale * patch.width
 			else
-				width = $ + FU * 4
+				width = $ + scale * 4
 			end
 			
 			--TODO: proper newline alignment
@@ -551,8 +569,12 @@ function MenuItem_Box:new(a)
 	a.corner_size = $ or FU * 5
 	
 	a.x_offset = $ or 0
+	a.y_offset = $ or 0
 	
 	a.on_draw = $ or nil
+	
+	a.visible = $
+	if a.visible == nil then a.visible = true end
 	
 	return a
 end
@@ -568,6 +590,7 @@ end
 function MenuItem_Box:draw(x, y)
 	local width, height = self:getBounds()
 	x = $ + self.x_offset - width / 2
+	y = $ + self.y_offset
 	
 	local og_x, og_y, og_width, og_height = x, y, width, height
 	local corner_size = self.corner_size
@@ -581,25 +604,27 @@ function MenuItem_Box:draw(x, y)
 		color = cv_menubgcolor.value
 	end
 	
-	v.drawFixedFill(x, y, width, height, color)
-	
-	local colormap = v.getColormap(nil, nil, "Menu_Translation_"..color)
-	
-	local round = v.cachePatch("MENU_ROUND") --TODO: override cachepatch
-	local round_width = round.width - round.leftoffset
-	v.drawScaled(x, y, corner_size / round_width, round, 0, colormap) --top-left corner
-	v.drawScaled(x + width, y, corner_size / round_width, round, V_FLIP, colormap) --top-right corner
--- 	v.drawFixedFill(x, y - corner_size, width, corner_size, self.color) --top edge
-	
-	local roundu = round
-	v.drawScaled(x, y + height, corner_size / round_width, roundu, V_FLIP, colormap) --bottom-left corner
-	v.drawScaled(x + width, y + height, corner_size / round_width, roundu, 0, colormap) --bottom-right corner
--- 	v.drawFixedFill(x, y + height, width, corner_size, self.color) --bottom edge
-	
--- 	v.drawFixedFill(x - corner_size, y, corner_size, height, self.color) --left edge
--- 	v.drawFixedFill(x + width, y, corner_size, height, self.color) --right edge
-	v.drawFixedFill(x, y - corner_size, width, height + corner_size * 2, color) --top/bottom edges
-	v.drawFixedFill(x - corner_size, y, width + corner_size * 2, height, color) --left/right edges
+	if self.visible then
+		v.drawFixedFill(x, y, width, height, color)
+		
+		local colormap = v.getColormap(nil, nil, "Menu_Translation_"..color)
+		
+		local round = v.cachePatch("MENU_ROUND") --TODO: override cachepatch
+		local round_width = round.width - round.leftoffset
+		v.drawScaled(x, y, corner_size / round_width, round, 0, colormap) --top-left corner
+		v.drawScaled(x + width, y, corner_size / round_width, round, V_FLIP, colormap) --top-right corner
+	-- 	v.drawFixedFill(x, y - corner_size, width, corner_size, self.color) --top edge
+		
+		local roundu = round
+		v.drawScaled(x, y + height, corner_size / round_width, roundu, V_FLIP, colormap) --bottom-left corner
+		v.drawScaled(x + width, y + height, corner_size / round_width, roundu, 0, colormap) --bottom-right corner
+	-- 	v.drawFixedFill(x, y + height, width, corner_size, self.color) --bottom edge
+		
+	-- 	v.drawFixedFill(x - corner_size, y, corner_size, height, self.color) --left edge
+	-- 	v.drawFixedFill(x + width, y, corner_size, height, self.color) --right edge
+		v.drawFixedFill(x, y - corner_size, width, height + corner_size * 2, color) --top/bottom edges
+		v.drawFixedFill(x - corner_size, y, width + corner_size * 2, height, color) --left/right edges
+	end
 	
 	if self.on_draw then
 		self:on_draw(og_x, og_y, og_width, og_height)
@@ -805,13 +830,15 @@ local function Drawer(drawer, player)
 		menu.scroll_vel = max(abs($) - FU / 32, 0) * ($ < 0 and -1 or 1)
 	end
 	
-	local speed = FU / TICRATE / 2
-	DrawSpikes(ANG1 * 10, 0, FU * 155, (FixedMul(menu_time, speed) + menu.scroll / 64) % FU, V_SNAPTOBOTTOM|V_SNAPTOLEFT)
-	DrawSpikes(ANG1 * 10 + ANGLE_180, FU * 270, FU * 40, (FixedMul(menu_time, speed) + menu.scroll / 64) % FU, V_SNAPTOTOP|V_SNAPTORIGHT)
+	if cv_luamenu_bgdecos.value then
+		local speed = FU / TICRATE / 2
+		DrawSpikes(ANG1 * 10, 0, FU * 155, (FixedMul(menu_time, speed) + menu.scroll / 64) % FU, V_SNAPTOBOTTOM|V_SNAPTOLEFT)
+		DrawSpikes(ANG1 * 10 + ANGLE_180, FU * 270, FU * 40, (FixedMul(menu_time, speed) + menu.scroll / 64) % FU, V_SNAPTOTOP|V_SNAPTORIGHT)
+	end
 	
 	--to differentiate the two
 	if menu.show_version then
-		v.drawString(0 + FU * 8, FU * 200 - FU * 8 - FU * 8, VERSIONSTRING.." newmenu", V_TRANSLUCENT|V_ALLOWLOWERCASE|V_SNAPTOLEFT|V_SNAPTOBOTTOM, "thin-fixed")
+		v.drawString(0 + FU * 8, FU * 200 - FU * 8 - FU * 8, VERSIONSTRING.." luamenu", V_TRANSLUCENT|V_ALLOWLOWERCASE|V_SNAPTOLEFT|V_SNAPTOBOTTOM, "thin-fixed")
 	end
 	
 	menu:draw()

@@ -11,8 +11,8 @@ menus.MainMenu = Menu:new{
 	items = {
 		MenuItem_Button:new{label = "1  Player", align = "center", link = "SingleplayerMenu"},
 		MenuItem_Button:new{label = "Multiplayer", align = "center", link = "MultiplayerMenu"},
-		MenuItem_Button:new{label = "Extras", align = "center"},
-		MenuItem_Button:new{label = "Addons", align = "center"},
+		MenuItem_Button:new{label = "Extras", align = "center", link = "ExtrasMenu"},
+		MenuItem_Button:new{label = "Addons", align = "center", link = "AddonsMenu"},
 		MenuItem_Button:new{label = "Options", align = "center", link = "OptionsMenu"},
 		MenuItem_Button:new{label = "Quit  Game", align = "center", action = function(self)
 			return function()
@@ -27,11 +27,11 @@ menus.SingleplayerMenu = Menu:new{
 	
 	items = {
 		MenuItem_Button:new{label = "Start Game", align = "center", link = "SingleplayerMenu_StartGame"},
-		MenuItem_Button:new{label = "Record Attack", align = "center", link = "MultiplayerMenu"},
-		MenuItem_Button:new{label = "NiGHTS Mode", align = "center"},
-		MenuItem_Button:new{label = "Marathon Run", align = "center"},
-		MenuItem_Button:new{label = "Tutorial", align = "center", link = "OptionsMenu"},
-		MenuItem_Button:new{label = "Statistics", align = "center"},
+		MenuItem_Button:new{label = "Record Attack", align = "center", link = "SingleplayerMenu_RecordAttack"}, --TODO: fade
+		MenuItem_Button:new{label = "NiGHTS Mode", align = "center", link = "SingleplayerMenu_NightsMode"},
+		MenuItem_Button:new{label = "Marathon Run", align = "center", link = "SingleplayerMenu_MarathonRun"},
+		MenuItem_Button:new{label = "Tutorial", align = "center", link = "SingleplayerMenu_Tutorial"}, --action
+		MenuItem_Button:new{label = "Statistics", align = "center", link = "SingleplayerMenu_Statistics"},
 	},
 }
 
@@ -153,22 +153,23 @@ menus.MultiplayerMenu = Menu:new{
 	anchor = {x = "center", y = "top"},
 	width = FU * 320 - FU * 30 * 2,
 	height = FU * 200 - FU * 20 * 2,
+	title = "MULTIPLAYER",
 	
 -- 	on_entry = ClearMultiplayer,
 	
 	items = {
 		MenuItem_Header:new{label = "Join a game"},
 		MenuItem_Button:new{label = "Server browser...", link = "ServerBowser", spacing = FU * 2},
-		MenuItem_Button:new{label = "Specify server address:", link = "MainMenu", spacing = FU * 2},
-		MenuItem_Button:new{label = "Rejoin previous servers...", link = "MainMenu", spacing = FU * 2},
+		MenuItem_Button:new{label = "Specify server address:", link = "ServerConnection", spacing = FU * 2}, --action
+		MenuItem_Button:new{label = "Rejoin previous servers...", link = "MultiplayerMenu_Rejoin", spacing = FU * 2}, --srb2-edit
 		
 		MenuItem_Header:new{label = "Host a game"},
-		MenuItem_Button:new{label = "Internet/LAN...", link = "OptionsMenu_Video", spacing = FU * 2},
-		MenuItem_Button:new{label = "Splitscreen...", link = "OptionsMenu_Video", spacing = FU * 2},
+		MenuItem_Button:new{label = "Internet/LAN...", link = "MultiplayerMenu_HostInternet", spacing = FU * 2},
+		MenuItem_Button:new{label = "Splitscreen...", link = "MultiplayerMenu_HostSplitscreen", spacing = FU * 2},
 		
 		MenuItem_Header:new{label = "Player setup"},
-		MenuItem_Button:new{label = "Player 1...", link = "MainMenu", spacing = FU * 2},
-		MenuItem_Button:new{label = "Player 2...", link = "MainMenu", spacing = FU * 2},
+		MenuItem_Button:new{label = "Player 1...", link = "MultiplayerMenu_P1Setup", spacing = FU * 2},
+		MenuItem_Button:new{label = "Player 2...", link = "MultiplayerMenu_P2Setup", spacing = FU * 2},
 	},
 }
 
@@ -177,19 +178,49 @@ menus.OptionsMenu = Menu:new{
 	anchor = {x = "center", y = "top"},
 	width = FU * 320 - FU * 50 * 2,
 	height = FU * 200 - FU * 20 * 2,
+	title = "OPTIONS",
 	
 	items = {
-		MenuItem_Button:new{label = "Player 1 Controls...", link = "MainMenu", spacing = FU * 2},
-		MenuItem_Button:new{label = "Player 2 Controls...", link = "MainMenu", spacing = FU * 2},
+		MenuItem_Button:new{label = "Player 1 Controls...", link = "OptionsMenu_P1Controls", spacing = FU * 2},
+		MenuItem_Button:new{label = "Player 2 Controls...", link = "OptionsMenu_P2Controls", spacing = FU * 2},
 		MenuItem_Button:new{label = "Controls per key", cvar = CV_FindVar("controlperkey"), spacing = FU * 2 + FU * 10},
 		
 		MenuItem_Button:new{label = "Video Options...", link = "OptionsMenu_Video", spacing = FU * 2},
 		MenuItem_Button:new{label = "Sound Options...", link = "OptionsMenu_Sound", spacing = FU * 2 + FU * 10},
 		
-		MenuItem_Button:new{label = "Server Options...", link = "OptionsMenu_Network", spacing = FU * 2},
+		MenuItem_Button:new{label = "Server Options...", link = "OptionsMenu_Server", spacing = FU * 2},
 		MenuItem_Button:new{label = "Network Options...", link = "OptionsMenu_Network", spacing = FU * 2 + FU * 10},
 		
-		MenuItem_Button:new{label = "Data Options...", link = "OptionsMenu_Network", spacing = FU * 2},
+		MenuItem_Button:new{label = "Data Options...", link = "OptionsMenu_Data", spacing = FU * 2},
+		MenuItem_Button:new{label = "Menu Options...", link = "OptionsMenu_Luamenu", spacing = FU * 2},
+	},
+}
+
+menus.OptionsMenu_Luamenu = Menu:new{
+	anchor = {x = "center", y = "top"},
+	width = FU * 320 - FU * 30 * 2,
+	height = FU * 200 - FU * 20 * 2,
+	title = "MENU OPTIONS",
+	
+	items = {
+		MenuItem_Header:new{label = "Visual"},
+		MenuItem_Button:new{label = "Background Decorations", cvar = CV_FindVar("luamenu_bgdecos"), spacing = FU * 2},
+		
+		MenuItem_Header:new{label = "Color Profile"},
+		MenuItem_Button:new{label = "Brightness", cvar = CV_FindVar("gamma"), spacing = FU * 2},
+	},
+}
+
+menus.OptionsMenu_P1Controls = Menu:new{
+	anchor = {x = "center", y = "top"},
+	width = FU * 320 - FU * 50 * 2,
+	height = FU * 200 - FU * 20 * 2,
+	title = "AY BOY I JUST GOT THE NEW iPHONE",--\nIT EVEN GOT AN APP TO DESTROY ALL OPPS",
+	
+	items = {
+		MenuItem_Button:new{label = "Player 1 Controls...", link = "a", spacing = FU * 2},
+		MenuItem_Button:new{label = "Player 2 Controls...", link = "a", spacing = FU * 2},
+		MenuItem_Button:new{label = "Controls per key", cvar = CV_FindVar("controlperkey"), spacing = FU * 2 + FU * 10},
 	},
 }
 
@@ -197,10 +228,11 @@ menus.OptionsMenu_Video = Menu:new{
 	anchor = {x = "center", y = "top"},
 	width = FU * 320 - FU * 30 * 2,
 	height = FU * 200 - FU * 20 * 2,
+	title = "VIDEO OPTIONS",
 	
 	items = {
 		MenuItem_Header:new{label = "Screen"},
-		MenuItem_Button:new{label = "Set Resolution...", spacing = FU * 2},
+		MenuItem_Button:new{label = "Set Resolution...", link = "OptionsMenu_Video_Resolution", spacing = FU * 2},
 		MenuItem_Button:new{label = "Fullscreen (F11)", cvar = CV_FindVar("fullscreen"), spacing = FU * 2},
 		MenuItem_Button:new{label = "Vertical Sync", cvar = CV_FindVar("vid_wait"), spacing = FU * 2},
 		MenuItem_Button:new{label = "Renderer (F10)", cvar = CV_FindVar("renderer"), spacing = FU * 2},
@@ -208,7 +240,7 @@ menus.OptionsMenu_Video = Menu:new{
 		MenuItem_Header:new{label = "Color Profile"},
 		MenuItem_Button:new{label = "Brightness", cvar = CV_FindVar("gamma"), spacing = FU * 2},
 		MenuItem_Button:new{label = "Saturation", cvar = CV_FindVar("saturation"), spacing = FU * 2},
-		MenuItem_Button:new{label = "Advanced Settings...", link = "OptionsMenu_Video", spacing = FU * 2},
+		MenuItem_Button:new{label = "Advanced Settings...", link = "OptionsMenu_Video_Color", spacing = FU * 2},
 		
 		MenuItem_Header:new{label = "Heads-Up Display"},
 		MenuItem_Button:new{label = "Show HUD", cvar = CV_FindVar("showhud"), spacing = FU * 2},
@@ -217,9 +249,9 @@ menus.OptionsMenu_Video = Menu:new{
 		MenuItem_Button:new{label = "Show Powerups", cvar = CV_FindVar("powerupdisplay"), spacing = FU * 2},
 		MenuItem_Button:new{label = "Local Ping Display", cvar = CV_FindVar("showping"), spacing = FU * 2},
 		MenuItem_Button:new{label = "Show Player Names", cvar = CV_FindVar("seenames"), spacing = FU * 2},
-		MenuItem_Button:new{label = "Uppercase Menus", cvar = CV_FindVar("menucaps"), spacing = FU * 2},
-		MenuItem_Button:new{label = "Menu Highlight Color", cvar = CV_FindVar("menucolor"), spacing = FU * 2},
-		MenuItem_Button:new{label = "Menu Background Color", cvar = CV_FindVar("menubgcolor"), spacing = FU * 2},
+		MenuItem_Button:new{label = "Uppercase Menus", cvar = CV_FindVar("menucaps"), spacing = FU * 2}, --srb2-edit
+		MenuItem_Button:new{label = "Menu Highlight Color", cvar = CV_FindVar("menucolor"), spacing = FU * 2}, --srb2-edit, romoney5
+		MenuItem_Button:new{label = "Menu Background Color", cvar = CV_FindVar("menubgcolor"), spacing = FU * 2}, --gks edit
 		MenuItem_Button:new{label = "Screen Fades", cvar = CV_FindVar("wipes"), spacing = FU * 2}, --romoney5
 		
 		MenuItem_Header:new{label = "Console"},
@@ -239,22 +271,49 @@ menus.OptionsMenu_Video = Menu:new{
 		MenuItem_Button:new{label = "Draw Distance", cvar = CV_FindVar("drawdist"), spacing = FU * 2},
 		MenuItem_Button:new{label = "Weather Draw Dist.", cvar = CV_FindVar("drawdist_precip"), spacing = FU * 2},
 		MenuItem_Button:new{label = "NiGHTS Hoop Draw Dist.", cvar = CV_FindVar("drawdist_nights"), spacing = FU * 2},
-		MenuItem_Button:new{label = "Pitch/Roll Object Rotation", cvar = CV_FindVar("pitchroll-tation"), spacing = FU * 2},
-		MenuItem_Button:new{label = "Ring Racers Screenshakes", cvar = CV_FindVar("rr_quakes"), spacing = FU * 2},
-		MenuItem_Button:new{label = "Screenshake Effects", cvar = CV_FindVar("earthquake"), spacing = FU * 2},
+		MenuItem_Button:new{label = "Pitch/Roll Object Rotation", cvar = CV_FindVar("pitchroll-tation"), spacing = FU * 2}, --srb2-edit, romoney5
+		MenuItem_Button:new{label = "Ring Racers Screenshakes", cvar = CV_FindVar("rr_quakes"), spacing = FU * 2}, --srb2-edit, romoney5
+		MenuItem_Button:new{label = "Screenshake Effects", cvar = CV_FindVar("earthquake"), spacing = FU * 2}, --srb2-edit, romoney5
 		MenuItem_Button:new{label = "Fullbright", cvar = CV_FindVar("fullbrite"), spacing = FU * 2},
 		MenuItem_Button:new{label = "Screen Flashes", cvar = CV_FindVar("flashes"), spacing = FU * 2},
 		
 		MenuItem_Header:new{label = "Diagnostic"},
 		MenuItem_Button:new{label = "Show FPS", cvar = CV_FindVar("showfps"), spacing = FU * 2},
-		MenuItem_Button:new{label = "Show TPS", cvar = CV_FindVar("showtps"), spacing = FU * 2}, --romoney5
+		MenuItem_Button:new{label = "Show TPS", cvar = CV_FindVar("showtps"), spacing = FU * 2}, --srb2-edit
 		MenuItem_Button:new{label = "Clear Before Redraw", cvar = CV_FindVar("homremoval"), spacing = FU * 2},
 		MenuItem_Button:new{label = "Show \"FOCUS LOST\"", cvar = CV_FindVar("showfocuslost"), spacing = FU * 2},
 		MenuItem_Button:new{label = "Show Movie Info", cvar = CV_FindVar("moviemodeinfo"), spacing = FU * 2},
 		
 		MenuItem_Header:new{label = "Renderer"},
-		MenuItem_Button:new{label = "OpenGL Options...", link = "OptionsMenu_Video", spacing = FU * 2},
+		MenuItem_Button:new{label = "OpenGL Options...", link = "OptionsMenu_Video_OpenGL", spacing = FU * 2},
 		MenuItem_Button:new{label = "FPS Cap", cvar = CV_FindVar("fpscap"), spacing = FU * 2},
+	},
+}
+
+menus.OptionsMenu_Video_OpenGL = Menu:new{
+	anchor = {x = "center", y = "top"},
+	width = FU * 320 - FU * 30 * 2,
+	height = FU * 200 - FU * 20 * 2,
+	title = "OPENGL OPTIONS", --"VIDEO OPTIONS",
+	
+	items = {
+		MenuItem_Header:new{label = "3D Models"},
+		MenuItem_Button:new{label = "Models", cvar = CV_FindVar("gr_models"), spacing = FU * 2},
+		MenuItem_Button:new{label = "Frame interpolation", cvar = CV_FindVar("gr_modelinterpolation"), spacing = FU * 2},
+		MenuItem_Button:new{label = "Ambient lighting", cvar = CV_FindVar("gr_modellighting"), spacing = FU * 2},
+		
+		MenuItem_Header:new{label = "General"},
+		MenuItem_Button:new{label = "Shaders", cvar = CV_FindVar("gr_shaders"), spacing = FU * 2},
+		MenuItem_Button:new{label = "Palette rendering", cvar = CV_FindVar("gr_paletterendering"), spacing = FU * 2},
+		MenuItem_Button:new{label = "Light Dithering", cvar = CV_FindVar("gr_lightdithering"), spacing = FU * 2}, --gks edit
+		MenuItem_Button:new{label = "Lack of perspective", cvar = CV_FindVar("gr_shearing"), spacing = FU * 2},
+		MenuItem_Button:new{label = "Field of view", cvar = CV_FindVar("fov"), spacing = FU * 2},
+		
+		MenuItem_Header:new{label = "Miscellaneous"},
+		MenuItem_Button:new{label = "Bit depth", cvar = CV_FindVar("scr_depth"), spacing = FU * 2},
+		MenuItem_Button:new{label = "Texture filter", cvar = CV_FindVar("gr_filtermode"), spacing = FU * 2},
+		MenuItem_Button:new{label = "Anisotropic", cvar = CV_FindVar("gr_anisotropicmode"), spacing = FU * 2},
+		MenuItem_Button:new{label = "Render distance", cvar = CV_FindVar("gr_renderdistance"), spacing = FU * 2}, --srb2-edit
 	},
 }
 
@@ -262,6 +321,7 @@ menus.OptionsMenu_Sound = Menu:new{
 	anchor = {x = "center", y = "top"},
 	width = FU * 320 - FU * 30 * 2,
 	height = FU * 200 - FU * 20 * 2,
+	title = "SOUND OPTIONS",
 	
 	items = {
 		MenuItem_Header:new{label = "Game Audio"},
@@ -289,6 +349,7 @@ menus.OptionsMenu_Network = Menu:new{
 	anchor = {x = "center", y = "top"},
 	width = FU * 320 - FU * 30 * 2,
 	height = FU * 200 - FU * 20 * 2,
+	title = "NETWORK OPTIONS",
 	
 	items = {
 		MenuItem_Header:new{label = "General"},
@@ -338,10 +399,9 @@ menus.SP_MainMenu = Menu:new{
 				self.level_title_label:draw(x + FU * 8, y + FU * 8 - FU)
 			end},
 		
-		MenuItem_Button:new{label = "Pandora's Box..."},
-		MenuItem_Button:new{label = "Emblem Hints..."},
-		MenuItem_Button:new{label = "Level Select...", spacing = FU * 8},
--- 		MenuItem_Button:new{label = "1  Player", align = "center", link = "SingleplayerMenu"},
+		MenuItem_Button:new{label = "Pandora's Box...", link = "SP_PandorasBox"},
+		MenuItem_Button:new{label = "Emblem Hints...", link = "SP_EmblemHints"},
+		MenuItem_Button:new{label = "Level Select...", link = "LevelSelect", spacing = FU * 8},
 		
 		MenuItem_Button:new{label = "Continue", link = ""},
 		MenuItem_Button:new{label = "Retry", action = function(self)
