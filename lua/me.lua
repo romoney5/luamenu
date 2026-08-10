@@ -362,6 +362,7 @@ function MenuItem_Text:draw(x, y)
 	local flags = self:getFlags(self.colored)
 	local col = v.getStringColormap(flags)
 	local uppercase = not (cv_menucaps and not cv_menucaps.value)
+	
 	--run twice; once to calculate the width, once to draw
 	for draw = 0, 1 do
 		width = 0
@@ -376,9 +377,18 @@ function MenuItem_Text:draw(x, y)
 			local code = char:byte()
 			
 			local patchname = "STCFN"..ZeroNumber(code, 3)
+			local cacheexists = cache[patchname]
 			
-			if cache[patchname] ~= false and v.patchExists(patchname) then
-				cache[patchname] = $ or v.cachePatch(patchname)
+			if cacheexists == nil or (cacheexists and not cacheexists.valid) then
+				if v.patchExists(patchname) then
+					cache[patchname] = v.cachePatch(patchname)
+				else
+					cache[patchname] = false
+				end
+			end
+			
+			if cache[patchname] then
+-- 				cache[patchname] = $ or v.cachePatch(patchname)
 				local patch = cache[patchname]
 				
 				if draw then
@@ -388,7 +398,6 @@ function MenuItem_Text:draw(x, y)
 				width = $ + FU * patch.width
 			else
 				width = $ + FU * 4
-				cache[patchname] = false
 			end
 		end
 		

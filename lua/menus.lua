@@ -96,6 +96,10 @@ menus.MultiplayerMenu = Menu:new{
 	},
 }
 
+
+--server bowser
+--w flaffy
+
 local masterserver = CV_FindVar("masterserver")
 
 --thax https://gist.github.com/jaredallard/ddb152179831dd23b230
@@ -120,6 +124,16 @@ menus.ServerBowser = Menu:new{
 	anchor = {x = "center", y = "top"},
 	width = FU * 320 - FU * 25 * 2,
 	height = FU * 200 - FU * 20 * 2,
+	
+	on_draw = function(self, v)
+		if self.loading then
+			local bg = v.cachePatch("MENU_LOAD1")
+			v.drawScaled(FU * 160, FU * 100, FU / 2, bg, V_50TRANS)
+			
+			local spinner = v.cachePatch("MENU_LOAD2", FixedAngle(FU * leveltime * -8))
+			v.drawScaled(FU * 160, FU * 100, FU / 2, spinner, 0)
+		end
+	end,
 	
 	on_entry = function(self, old_menu)
 		--TODO: menuitem free position option..?
@@ -151,18 +165,17 @@ menus.ServerBowser = Menu:new{
 			}
 			
 			self:updateItems()
+			self.loading = true
 			
 			HTTP.get(("%s/rooms/%d/servers"):format(masterserver.string, button.ms_id), function(response)
+				self.loading = false
 				if response.message then
 					print("error:", response.message)
 					return
 				end
 				
--- 				print(response.body)
-				
 				local body = HTTP.decodeURL(response.body)
 				local servs = {}
-				local state = {}
 				local lines = string_split(body, "\n")
 				
 				for i, line in ipairs(lines) do
@@ -183,22 +196,8 @@ menus.ServerBowser = Menu:new{
 							server.version = word
 						end
 					end
--- 					if not state.in_room then
--- 						state.in_room = true
--- 						state.room = {}
--- 						state.line_num = 1
--- 						state.empty_lines = 0
--- 					end
-					
--- 					if state.empty_lines == 2 then
--- 						state.in_room = false
--- 						table.insert(servs, state.room)
--- 					end
 					
 					table.insert(servs, server)
--- 					state.line_num = $ + 1
-					
-	-- 				print(line)
 				end
 				
 				self.items = {
@@ -215,12 +214,14 @@ menus.ServerBowser = Menu:new{
 		end
 		
 		local function get_rooms(response)
+			self.loading = false
+			
 			if response.message then
 				print("error:", response.message)
 				return
 			end
 			
-			local body = response.body
+			local body = HTTP.decodeURL(response.body)
 			local rooms = {}
 			local state = {}
 			
@@ -289,22 +290,12 @@ menus.ServerBowser = Menu:new{
 			HTTP.get(("%s/rooms"):format(masterserver.string), get_rooms)
 		end
 		
+		self.loading = true
 		HTTP.get(("%s/versions/%d"):format(masterserver.string, MODID), get_version)
 	end,
 	
 	items = {
-		MenuItem_Header:new{label = "Join a game"},
 		MenuItem_Button:new{label = "Server browser...", link = "ServerBowser", spacing = FU * 2},
-		MenuItem_Button:new{label = "Specify server address:", link = "MainMenu", spacing = FU * 2},
-		MenuItem_Button:new{label = "Rejoin previous servers...", link = "MainMenu", spacing = FU * 2},
-		
-		MenuItem_Header:new{label = "Host a game"},
-		MenuItem_Button:new{label = "Internet/LAN...", link = "OptionsMenu_Video", spacing = FU * 2},
-		MenuItem_Button:new{label = "Splitscreen...", link = "OptionsMenu_Video", spacing = FU * 2},
-		
-		MenuItem_Header:new{label = "Player setup"},
-		MenuItem_Button:new{label = "Player 1...", link = "MainMenu", spacing = FU * 2},
-		MenuItem_Button:new{label = "Player 2...", link = "MainMenu", spacing = FU * 2},
 	},
 }
 
