@@ -21,9 +21,10 @@ menus.MainMenu = Menu:new{
 		MenuItem_Button:new{label = "Addons", align = "center", link = "AddonsMenu"},
 		MenuItem_Button:new{label = "Options", align = "center", link = "OptionsMenu"},
 		MenuItem_Button:new{label = "Quit  Game", align = "center", action = function(self)
-			return function()
-				COM_BufInsertText(nil, "quit")
-			end
+-- 			return function()
+-- 				COM_BufInsertText(nil, "quit")
+-- 			end
+			ShowPopup("Sonic final dmeo", "Did you get all those Chaos Emeralds?")
 		end},
 	},
 }

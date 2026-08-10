@@ -1,4 +1,5 @@
 --Me?
+--main menu logic
 
 if not gks_luamenu_supported then return end
 gks_luamenu = true
@@ -42,11 +43,6 @@ local function SetActive(active)
 		end
 	end
 end
-
-local function ShowPopup(title, message)
-	current_popup = {title = title, message = message}
-end
-rawset(_G, "ShowPopup", ShowPopup)
 
 local menu_time = 0
 local menu_enter_anim = FU
@@ -390,6 +386,8 @@ function MenuItem_Text:new(a)
 	a.scale = $ or FU
 	a.link = $ or nil
 	
+	a.parent_width = $ or 0
+	
 	a.colored = $ or false
 	
 	return a
@@ -431,79 +429,177 @@ addHook("AddonLoaded", function()
 	cache = {}
 end)
 
+local function cachePatch(patchname)
+	local cacheexists = cache[patchname]
+	
+	if cacheexists == nil or (cacheexists and not cacheexists.valid) then
+		if v.patchExists(patchname) then
+			cache[patchname] = v.cachePatch(patchname)
+		else
+			cache[patchname] = false
+		end
+	end
+	
+	return cache[patchname]
+end
+
+function MenuItem_Text:GetLayout()
+	local label = self.label
+	local uppercase = cv_menucaps.value
+	local layout = {}
+	self.text_layout = layout
+	
+	local line = {}
+	
+	if uppercase then
+		char = $:upper()
+	end
+	
+	local width = 0
+	
+	for i = 1, label:len() + 1 do
+		local char = label:sub(i, i)
+		
+		local code = char:byte()
+		
+		if char == "\n" or i == label:len() + 1 then
+			line.width = width
+			table.insert(layout, line)
+			width = 0
+			line = {}
+			
+			continue
+		elseif self.parent_width and width > self.parent_width then --word wrapping
+			line.width = width
+			width = 0
+			
+			local newline = {}
+			local total_width = line[#line]
+			
+			--go through the letters from end and add stuff until we find a space
+			for i = #line - 1, 1, -2 do
+				if line[i] == " " then
+					break
+				end
+				
+				table.insert(newline, 1, line[i])
+				table.insert(newline, 2, line[i + 1])
+				
+				width = $ + line.width - line[i + 1]
+				line.width = line[i + 1]
+				
+				table.remove(line, i + 1)
+				table.remove(line, i)
+			end
+			
+			--push everything back
+			local offset = newline[2]
+			
+			for i = 2, #newline, 2 do
+				newline[i] = $ - offset
+			end
+			
+			table.insert(layout, line)
+			line = newline--{}
+		end
+		
+		table.insert(line, char)
+		table.insert(line, width)
+		
+		local patchname = self.font..ZeroNumber(code, 3)
+		local patch = cachePatch(patchname)
+		
+		if patch then
+			width = $ + FU * patch.width
+		else
+			width = $ + FU * 4
+		end
+	end
+end
+
 function MenuItem_Text:draw(x, y)
 	local width, height = self:getBounds()
 	
--- 	v.drawString(x, y, self.label, self:getFlags(), "fixed"..self.align_string) --TODO: alignment option
 	local dupy = v.dupy() * FU
-	if y < -((v.height() * FU - dupy * 200) / 2) - height then
+	if y < -((v.height() * FU - dupy * 200) / 2) - height then --TODO: support wrapping here
 		return
 	end
 	
 	if y > FU * 200 + (v.height() * FU - dupy * 200) / 2 then
 		return
 	end
+	
+	if self._old_label ~= self.label then --TODO: wifth
+		self._old_label = self.label
+		self:GetLayout()
+	end
 
 	local label = self.label
 	local scale = self.scale
 	local width = 0
+	local max_width = 0 --used to get text bounds
 	local flags = self:getFlags(self.colored)
 	local col = v.getStringColormap(flags)
 	local uppercase = cv_menucaps.value
 	
 	local lines = 0
 	
-	--run twice; once to calculate the width, once to draw
-	for draw = 0, 1 do
-		width = 0
+	--run once: once to draw,
+	for i, line in ipairs(self.text_layout) do
+		local _, align_string, factor = self:getAlignment()
+		local align_x = FixedMul(line.width, factor)
 		
-		for i = 1, label:len() do
-			local char = label:sub(i, i)
+		for ii = 1, #line, 2 do
+			local char = line[ii]
+			local char_x = x + FixedMul(line[ii + 1], scale) + align_x
+			local char_y = y + (i - 1) * scale * 10
 			
-			if uppercase then
-				char = $:upper()
-			end
+			local patch = cachePatch(self.font..ZeroNumber(char:byte(), 3))
 			
-			local code = char:byte()
-			
-			local patchname = self.font..ZeroNumber(code, 3)
-			local cacheexists = cache[patchname]
-			
-			if cacheexists == nil or (cacheexists and not cacheexists.valid) then
-				if v.patchExists(patchname) then
-					cache[patchname] = v.cachePatch(patchname)
-				else
-					cache[patchname] = false
-				end
-			end
-			
-			if cache[patchname] then
--- 				cache[patchname] = $ or v.cachePatch(patchname)
-				local patch = cache[patchname]
-				
-				if draw then
-					v.drawScaled(x + width, y + lines * scale * 10, scale, patch, 0, col)
-				end
-				
-				width = $ + scale * patch.width
-			else
-				width = $ + scale * 4
-			end
-			
-			--TODO: proper newline alignment
-			if draw and char == "\n" then
-				width = 0
-				lines = $ + 1
+			if patch then
+				v.drawScaled(char_x, char_y, scale, patch, 0, col)
 			end
 		end
 		
-		if not draw then
-			local _, align_string, factor = self:getAlignment()
-			x = $ + FixedMul(width, factor)
-		end
+		max_width = max($, line.width)
 	end
 	
-	self._width = width
+	--run twice: once to calculate the width, once to draw
+-- 	for i = 1, label:len() do
+-- 		local char = label:sub(i, i)
+		
+-- 		if uppercase then
+-- 			char = $:upper()
+-- 		end
+		
+-- 		local code = char:byte()
+		
+-- 		local patchname = self.font..ZeroNumber(code, 3)
+-- 		local patch = cachePatch(patchname)
+		
+-- 		if patch then
+-- 			if draw then
+-- 				v.drawScaled(x + width, y + lines * scale * 10, scale, patch, 0, col)
+-- 			end
+			
+-- 			width = $ + scale * patch.width
+-- 		else
+-- 			width = $ + scale * 4
+-- 		end
+		
+-- 		--TODO: proper newline alignment
+-- 		if draw and char == "\n" then
+-- 			width = 0
+-- 			lines = $ + 1
+-- 		end
+-- 	end
+	
+-- 	if not draw then
+-- 		local _, align_string, factor = self:getAlignment()
+-- 		x = $ + FixedMul(width, factor)
+-- 	end
+	
+	self._width = max_width --this should be in getlayout
 end
 
 --menu button
@@ -623,9 +719,8 @@ function MenuItem_Box:new(a)
 	local a = self.super:new(a)
 	setmetatable(a, self)
 	
-	a.label = $ or "Button"
-	a.width = $ or FU * 50
-	a.height = $ or FU * 50
+	a.width = $ or 0--FU * 50
+	a.height = $ or 0--FU * 50
 	a.color = $
 	a.corner_size = $ or FU * 5
 	
@@ -692,6 +787,60 @@ function MenuItem_Box:draw(x, y)
 	end
 end
 
+local MenuItem_Popup = MenuItem_Box:inherit()
+rawset(_G, "MenuItem_Popup", MenuItem_Popup)
+
+function MenuItem_Popup:new(a)
+	local a = self.super:new(a)
+	setmetatable(a, self)
+	
+	a.title = $ or "Title"
+	a.body = $ or "Body"
+	a.width = $ or FU * 250
+	a.height = $ or FU * 100
+	
+	a.on_draw = $ or nil
+	
+	a.open_anim = $ or 0
+	
+	a.title_label = $ or MenuItem_Text:new{label = a.title, align = "center"}
+	a.body_label = $ or MenuItem_Text:new{label = a.body, align = "center"}
+	
+	return a
+end
+
+function MenuItem_Popup:draw(x, y)
+	v.fadeScreen(0xFF00, 16)
+	
+	--draw box
+	self.super.draw(self, x, y)
+	
+	local width, height = self:getBounds()
+	x = $ + self.x_offset - width / 2
+	y = $ + self.y_offset
+	
+	local og_x, og_y, og_width, og_height = x, y, width, height
+	local corner_size = self.corner_size
+	
+	x, y = $ + corner_size, $ + corner_size
+	width, height = $ - corner_size * 2, $ - corner_size * 2
+	
+	if self.visible then
+		--TODO: greatest word wrapping
+-- 		v.drawString(x + width / 2, y - corner_size - FU * 4, self.title, V_ALLOWLOWERCASE, "fixed-center")
+-- 		v.drawString(x + width / 2, y + FU * 8, self.body, V_ALLOWLOWERCASE, "fixed-center")
+		self.title_label:draw(x + width / 2, y - corner_size - FU * 4)
+		self.body_label.parent_width = width
+		self.body_label:draw(x + width / 2, y + FU * 8)
+	end
+end
+
+local function ShowPopup(title, message)
+	local popup = MenuItem_Popup:new{title = title, body = message}
+	
+	current_popup = popup
+end
+rawset(_G, "ShowPopup", ShowPopup)
 
 
 
@@ -913,17 +1062,18 @@ local function Drawer(drawer, player)
 	--draw popup
 	if current_popup then
 		local popup = current_popup
-		v.fadeScreen(0xFF00, 16)
+		popup:draw(FU * 320 / 2, FU * 100 / 2)
+-- 		v.fadeScreen(0xFF00, 16)
 		
-		local width = FU * 250
-		local height = FU * 100
-		local x, y = FU * 160, FU * 100
+-- 		local width = FU * 250
+-- 		local height = FU * 100
+-- 		local x, y = FU * 160, FU * 100
 		
-		v.drawFixedFill(x - width / 2, y - height / 2, width, height, 159)
+-- 		v.drawFixedFill(x - width / 2, y - height / 2, width, height, 159)
 		
-		--TODO: greatest word wrapping
-		v.drawString(x, y - height / 2 - FU * 4, popup.title, V_ALLOWLOWERCASE, "fixed-center")
-		v.drawString(x, y - height / 2 + FU * 8, popup.message, V_ALLOWLOWERCASE, "fixed-center")
+-- 		--TODO: greatest word wrapping
+-- 		v.drawString(x, y - height / 2 - FU * 4, popup.title, V_ALLOWLOWERCASE, "fixed-center")
+-- 		v.drawString(x, y - height / 2 + FU * 8, popup.message, V_ALLOWLOWERCASE, "fixed-center")
 	end
 	
 -- 	v.drawScaled(mx, my, FU, v.cachePatch("M_CURSOR"), V_NOSCALEPATCH|V_NOSCALESTART)

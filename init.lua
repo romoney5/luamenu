@@ -4,12 +4,6 @@ local directory = { "/",
 	"Menu.lua",
 	
 -- 	"TranslationTest.lua",
-	
-// 	--libraries
-// 	{ "libraries",
-// 		"fixed_decimal.lua",
-// 		"custom_hud.lua", --i never actually got to use it!! !
-// 	},						--(i think i had it kept in a git stash that is lost media now)
 }
 
 local function load(dir, path)
