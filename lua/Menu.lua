@@ -27,6 +27,53 @@ local menu_time = 0
 local menu_enter_anim = FU
 local menu_exit_anim = FU
 
+local keyHold = {}
+
+local cache = {}
+
+--lock contros after entering a menu
+
+--clear the cache once an addon is loaded
+addHook("AddonLoaded", function()
+	cache = {}
+end)
+
+local function cachePatch(patchname)
+	local cacheexists = cache[patchname]
+	
+	if cacheexists == nil or (cacheexists and not cacheexists.valid) then
+		if v.patchExists(patchname) then
+			cache[patchname] = v.cachePatch(patchname)
+		else
+			cache[patchname] = false
+		end
+	end
+	
+	return cache[patchname]
+end
+
+--screen coordinates to 320x200 coordinates
+local function ScreenToDisplay(x, y)
+	x = FU * $
+	y = FU * $
+
+	local dupx = v.dupx()
+	local dupy = v.dupy()
+	local width = FU * v.width()
+	local height = FU * v.height()
+	local base_width = FU * 320
+	local base_height = FU * 200
+	local scaled_width = base_width * dupx
+	local scaled_height = base_height * dupy
+	
+	local left = width / 2 - scaled_width / 2
+-- 	local bottom = height / 2 + scaled_height / 2
+-- 	local right = width / 2 + scaled_width / 2
+	local top = height / 2 - scaled_height / 2
+	
+	return FixedMul(x - left, FixedDiv(base_width + left / 2, width)), FixedMul(y - top, FixedDiv(base_height + top / 2, height))
+end
+
 local function SetActive(active)
 	if active then
 		input.setMouseGrab(false)
@@ -212,7 +259,7 @@ function Menu:draw()
 			local speed = cv_luamenu_anims.value and v.deltaTics() * 3 / 4 or FU
 			self.cursor_position.x = ease.linear(speed, $, align + FixedMul(width, factor) - FU * (24 or 32)) --tied to fps
 			self.cursor_position.y = ease.linear(speed, $, py)
-			v.drawScaled(x + self.cursor_position.x, y + self.cursor_position.y, FU, v.cachePatch("M_CURSOR"), 0)
+			v.drawScaled(x + self.cursor_position.x, y + self.cursor_position.y, FU, cachePatch("M_CURSOR"), 0)
 		end
 	end
 	
@@ -263,7 +310,7 @@ function Menu:getYPositionAt(index)
 -- 		if self.selection == i then
 -- 			self.cursor_position.x = ease.linear(FU / 3, $, x + align + FixedMul(width, factor) - FU * (24 or 32)) --tied to fps
 -- 			self.cursor_position.y = ease.linear(FU / 3, $, y)
--- 			v.drawScaled(self.cursor_position.x, self.cursor_position.y, FU, v.cachePatch("M_CURSOR"), 0)
+-- 			v.drawScaled(self.cursor_position.x, self.cursor_position.y, FU, cachePatch("M_CURSOR"), 0)
 -- 		end
 		
 		y = $ + height + item.spacing
@@ -433,27 +480,6 @@ local function ZeroNumber(str, amount)
 	return string.rep("0", amount - str:len())..str
 end
 
-local cache = {}
-
---clear the cache once an addon is loaded
-addHook("AddonLoaded", function()
-	cache = {}
-end)
-
-local function cachePatch(patchname)
-	local cacheexists = cache[patchname]
-	
-	if cacheexists == nil or (cacheexists and not cacheexists.valid) then
-		if v.patchExists(patchname) then
-			cache[patchname] = v.cachePatch(patchname)
-		else
-			cache[patchname] = false
-		end
-	end
-	
-	return cache[patchname]
-end
-
 function MenuItem_Text:recalcLayout()
 	local label = self.label
 	local uppercase = cv_menucaps.value and not self.force_lowercase
@@ -544,10 +570,11 @@ function MenuItem_Text:draw(x, y)
 	local uppercase = cv_menucaps.value and not self.force_lowercase
 	
 	if self._old_label ~= self.label or self._old_uppercase ~= uppercase
-	or self._old_parent_width ~= self.parent_width then
+	or self._old_parent_width ~= self.parent_width--[[ or self._old_scale ~= self.scale]] then
 		self._old_label = self.label
 		self._old_uppercase = uppercase
 		self._old_parent_width = self.parent_width
+		self._old_scale = self.scale
 		self:recalcLayout()
 	end
 
@@ -563,7 +590,7 @@ function MenuItem_Text:draw(x, y)
 	--run once: once to draw,
 	for i, line in ipairs(self.text_layout) do
 		local _, align_string, factor = self:getAlignment()
-		local align_x = FixedMul(line.width, factor)
+		local align_x = FixedMul(FixedMul(line.width, factor), self.scale)
 		
 		for ii = 1, #line, 2 do
 			local char = line[ii]
@@ -691,7 +718,9 @@ function MenuItem_Box:new(a)
 	
 	a.width = $ or 0--FU * 50
 	a.height = $ or 0--FU * 50
+	a.scale = $ or FU
 	a.color = $
+	a.color_offset = $ or 0
 	a.corner_size = $ or FU * 5
 	
 	a.x_offset = $ or 0
@@ -715,11 +744,14 @@ end
 
 function MenuItem_Box:draw(x, y)
 	local width, height = self:getBounds()
+	local corner_size = self.corner_size
+	
+	width, height, corner_size = FixedMul($, self.scale), FixedMul($, self.scale), FixedMul($, self.scale)
+	
 	x = $ + self.x_offset - width / 2
-	y = $ + self.y_offset
+	y = $ + self.y_offset - FixedMul(height / 2, self.scale - FU)
 	
 	local og_x, og_y, og_width, og_height = x, y, width, height
-	local corner_size = self.corner_size
 	
 	x, y = $ + corner_size, $ + corner_size
 	width, height = $ - corner_size * 2, $ - corner_size * 2
@@ -730,12 +762,14 @@ function MenuItem_Box:draw(x, y)
 		color = cv_menubgcolor.value
 	end
 	
+	color = $ + self.color_offset
+	
 	if self.visible then
 		v.drawFixedFill(x, y, width, height, color)
 		
 		local colormap = v.getColormap(nil, nil, "Menu_Translation_"..color)
 		
-		local round = v.cachePatch("MENU_ROUND") --TODO: override cachepatch
+		local round = cachePatch("MENU_ROUND")
 		local round_width = round.width - round.leftoffset
 		v.drawScaled(x, y, corner_size / round_width, round, 0, colormap) --top-left corner
 		v.drawScaled(x + width, y, corner_size / round_width, round, V_FLIP, colormap) --top-right corner
@@ -772,22 +806,88 @@ function MenuItem_UI_Button:new(a)
 	a.on_draw = $ or nil
 	
 -- 	a.open_anim = $ or 0
+	a.color_offset = $ or -3
 	
 	a.body_label = $ or MenuItem_Text:new{label = a.body, align = "center"}
 	
 	return a
 end
 
+function MenuItem_UI_Button:checkBounds(x, y, mx, my)
+	return mx >= x - self.width / 2 and mx < x + self.width / 2
+	and my >= y and my < y + self.height
+end
+
 function MenuItem_UI_Button:draw(x, y)
+	local mx, my = ScreenToDisplay(input.getCursorPosition())
+	local pressed = (mouse.buttons & MB_BUTTON1)
+	local keyheld = false
+	
+	if self.keys then
+		for i, key in ipairs(self.keys) do
+			if keyHold[key] then
+				keyheld = true
+				
+				break
+			end
+		end
+	end
+	
+	pressed = $ or keyheld
+	
+	local scale_target = FU
+	local scale_speed = FU / (TICRATE / 2)
+	
+	if self:checkBounds(x, y, mx, my) or keyheld or self._last_keyheld then
+		self.color_offset = -4
+-- 		self.scale = FU * 15 / 14
+		scale_target = FU * 12 / 11
+		
+		if pressed then
+			self.color_offset = -2
+-- 			self.scale = FU
+			scale_target = FU * 6 / 7
+			scale_speed = FU / (TICRATE / 6)
+		end
+		
+		if not pressed and self._last_pressed then
+			if self.action then
+				next_action = self:action()
+				
+				if next_action == true then
+					next_action = nil
+					
+					current_popup = nil
+				end
+			end
+		end
+	else
+		self.color_offset = -3
+-- 		self.scale = FU
+		scale_target = FU
+	end
+	
+	if self.scale < scale_target then
+		self.scale = min($ + FixedMul(scale_speed, v.deltaTics()), scale_target)
+	elseif self.scale > scale_target then
+		self.scale = max($ - FixedMul(scale_speed, v.deltaTics()), scale_target)
+	end
+	
+	self._last_pressed = pressed
+	self._last_keyheld = keyheld
+
 	--draw box
 	self.super.draw(self, x, y)
 	
-	self.body_label:draw(x, y + self.height / 2 - FU * 8 / 2) --TODO: height bouns
+	self.body_label.scale = self.scale
+	self.body_label:draw(x, y + self.height / 2 - self.body_label.scale * 8 / 2) --TODO: height bouns
 end
 
 function MenuItem_UI_Button:canSelect()
 	return true
 end
+
+MenuItem_UI_Button.activate = MenuItem_Button.activate
 
 --sliding popup
 local MenuItem_Popup = MenuItem_Box:inherit()
@@ -805,6 +905,9 @@ function MenuItem_Popup:new(a)
 	a.on_draw = $ or nil
 	
 	a.open_anim = $ or 0
+	
+	a.buttons = $ or {}
+	a.keys = $ or nil
 	
 	a.title_label = $ or MenuItem_Text:new{label = a.title, align = "center"}
 	a.body_label = $ or MenuItem_Text:new{label = a.body, align = "center"}
@@ -836,17 +939,33 @@ function MenuItem_Popup:draw(x, y)
 	width, height = $ - corner_size * 2, $ - corner_size * 2
 	
 	if self.visible then
-		--TODO: greatest word wrapping
--- 		v.drawString(x + width / 2, y - corner_size - FU * 4, self.title, V_ALLOWLOWERCASE, "fixed-center")
--- 		v.drawString(x + width / 2, y + FU * 8, self.body, V_ALLOWLOWERCASE, "fixed-center")
 		self.title_label:draw(x + width / 2, y - corner_size - FU * 4)
 		self.body_label.parent_width = width
 		self.body_label:draw(x + width / 2, y + FU * 8)
+		
+		local num_buttons = #self.buttons
+		
+		for i, v in ipairs(self.buttons) do
+			local button_x = ease.linear(FU * i / (num_buttons + 1), x, x + width)
+			v:draw(button_x, y + self.height - v.height / 2)
+		end
 	end
 end
 
-local function ShowPopup(title, message)
-	local popup = MenuItem_Popup:new{title = title, body = message}
+local function ShowPopup(title, message, buttons)
+	local popup = MenuItem_Popup:new{title = title, body = message,
+		buttons = {},
+	}
+	
+	buttons = $ or {{body = "OK", keys = {"escape"}, action = function(self) return true end}}
+	
+	if buttons then
+		for i, v in ipairs(buttons) do
+			table.insert(popup.buttons, 
+				MenuItem_UI_Button:new{body = v.body, action = v.action, keys = v.keys}
+			)
+		end
+	end
 	
 	current_popup = popup
 end
@@ -857,7 +976,7 @@ rawset(_G, "ShowPopup", ShowPopup)
 
 local function DrawSpikes(rot, ox, oy, scroll, flags)
 	local col = v.getColormap(nil, nil, "Menu_Translation_"..cv_menubgcolor.value - 2)
-	local bg2 = v.cachePatch("MENU_SPIKE")
+	local bg2 = cachePatch("MENU_SPIKE")
 	local bg = v.cachePatch("MENU_SPIKE", -rot + ANGLE_90)
 	local dimension = bg2.height - 1
 	
@@ -883,11 +1002,13 @@ local function Input(key)
 	local name = key.name:lower()
 	local state = GetState()
 	
+	keyHold[name] = true
+	
 	if menuactive and current_popup then
 		--dismiss the popup
-		if name == "escape" then
-			current_popup = nil
-		end
+-- 		if name == "escape" then
+-- 			current_popup = nil
+-- 		end
 		
 		return
 	end
@@ -976,28 +1097,18 @@ local function Input(key)
 	end
 end
 
+--first time i've ever used this hook
+addHook("KeyDown", Input)
+
+addHook("KeyUp", function(key)
+	local name = key.name:lower()
+	
+	keyHold[name] = nil
+end)
+
 local mouse_pressed = false
 local mouse_drag = {x = 0, y = 0, dragging = false, start_scroll = 0, updates = 0, prev_x = 0, prev_y = 0}
 loadfile("MenuData.lua")(menus, v)
-
---screen coordinates to 320x200 coordinates
-local function ScreenToDisplay(x, y)
-	local dupx = v.dupx()
-	local dupy = v.dupy()
-	local width = FU * v.width()
-	local height = FU * v.height()
-	local base_width = FU * 320
-	local base_height = FU * 200
-	local scaled_width = base_width * dupx
-	local scaled_height = base_height * dupy
-	
-	local left = width / 2 - scaled_width / 2
--- 	local bottom = height / 2 + scaled_height / 2
--- 	local right = width / 2 + scaled_width / 2
-	local top = height / 2 - scaled_height / 2
-	
-	return FixedMul(x - left, FixedDiv(base_width + left / 2, width)), FixedMul(y - top, FixedDiv(base_height + top / 2, height))
-end
 
 local function Drawer(drawer, player)
 -- 	local serverlistcount = #serverlist
@@ -1021,16 +1132,11 @@ local function Drawer(drawer, player)
 	local menu = menus[current_menu]
 	assert(menu, ("Drawer: Invalid menu \"%s\"!"):format(tostring(current_menu)))
 	
-	local mx, my = input.getCursorPosition() --dup
-	mx, my = $ * FU, $ * FU
--- 	local _, dupx = v.dupx()
--- 	local _, dupy = v.dupy()
--- 	mx, my = FixedDiv($, dupx), FixedDiv($, dupy)
-	mx, my = ScreenToDisplay(mx, my)
+	local mx, my = ScreenToDisplay(input.getCursorPosition())
 -- 	v.drawString(20, 10, (mx / FU).." "..(my / FU))
 -- 	v.drawString(20, 20, v.width())
 	
-	if (mouse.buttons & MB_BUTTON1) then
+	if (mouse.buttons & MB_BUTTON1) and not current_popup then
 		--hack to stop initial positions from messing up the drag
 		if mouse_drag.x ~= mx or mouse_drag.y ~= my then
 			mouse_drag.updates = ($ or 0) + 1
@@ -1059,7 +1165,7 @@ local function Drawer(drawer, player)
 		
 		mouse_pressed = true
 	else
-		if mouse_pressed and not mouse_drag.dragging then
+		if mouse_pressed and not mouse_drag.dragging and not current_popup then
 			local menux, menuy = menu:getPosition()
 			menuy = $ - menu.scroll
 			for i, item in ipairs(menu.items) do
@@ -1177,7 +1283,7 @@ local function Drawer(drawer, player)
 -- 		v.drawString(x, y - height / 2 + FU * 8, popup.message, V_ALLOWLOWERCASE, "fixed-center")
 	end
 	
--- 	v.drawScaled(mx, my, FU, v.cachePatch("M_CURSOR"))
+-- 	v.drawScaled(mx, my, FU, cachePatch("M_CURSOR"))
 end
 
 addHook("MenuThinker", function()
@@ -1196,6 +1302,3 @@ addHook("MenuThinker", function()
 end)
 
 hud.add(Drawer, "menu")
-
---first time i ever use this hook
-addHook("KeyDown", Input)

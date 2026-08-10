@@ -14,6 +14,33 @@ menus.MainMenu = Menu:new{
 	anchor = {x = "center", y = "bottom"},
 	show_version = true,
 	
+	quit_msgs = {
+		"Eggman's tied explosives\nto your girlfriend, and\nwill activate them if\nyou press the 'Y' key!\nPress 'N' to save her!",
+		"What would Tails say if\nhe saw you quitting the game?",
+		"Hey!\nWhere do ya think you're goin'?",
+		"Forget your studies!\nPlay some more!",
+		"You're trying to say you\nlike Sonic 2K6 better than\nthis, right?",
+		"Don't leave yet -- there's a\nsuper emerald around that corner!",
+		"You'd rather work than play?",
+		"Go ahead and leave. See if I care...\n*sniffle*",
+		
+		"If you leave now,\nEggman will take over the world!",
+		"Don't quit!\nThere are animals\nto save!",
+		"Aw c'mon, just bop\na few more robots!",
+		"Did you get all those Chaos Emeralds?", --mno
+		"If you leave, I'll use\nmy spin attack on you!",
+		"Don't go!\nYou might find the hidden\nlevels!",
+		"Hit the 'N' key, Sonic!\nThe 'N' key!",
+		
+		"Are you really going to give up?\nWe certainly would never give you up.",
+		"Come on, just ONE more netgame!",
+		"Press 'N' to unlock\nthe Ultimate Cheat!",
+		"Why don't you go back and try\njumping on that house to\nsee what happens?",
+		"Every time you press 'Y', an\nSRB2 Developer cries...",
+		"You'll be back to play soon, though...\n......right?",
+		"Aww, is Egg Rock Zone too\ndifficult for you?",
+	},
+	
 	items = {
 		MenuItem_Button:new{label = "1  Player", align = "center", link = "SingleplayerMenu"},
 		MenuItem_Button:new{label = "Multiplayer", align = "center", link = "MultiplayerMenu"},
@@ -21,10 +48,20 @@ menus.MainMenu = Menu:new{
 		MenuItem_Button:new{label = "Addons", align = "center", link = "AddonsMenu"},
 		MenuItem_Button:new{label = "Options", align = "center", link = "OptionsMenu"},
 		MenuItem_Button:new{label = "Quit  Game", align = "center", action = function(self)
+			local quit_msgs = self.parent.quit_msgs
 -- 			return function()
 -- 				COM_BufInsertText(nil, "quit")
 -- 			end
-			ShowPopup("Sonic final dmeo", "Did you get all those Chaos Emeralds?")
+			ShowPopup("Quit Game", quit_msgs[M_RandomRange(1, #quit_msgs)], {
+				{body = "Back", keys = {"n", "escape"}, action = function(self)
+					return true
+				end},
+				{body = "Quit", keys = {"y", "enter"}, action = function(self)
+					return function()
+						COM_BufInsertText(nil, "quit")
+					end
+				end},
+			})
 		end},
 	},
 }

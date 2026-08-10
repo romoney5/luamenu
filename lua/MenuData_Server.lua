@@ -214,6 +214,54 @@ local function serv_connect(ip, port)
 	CL_ConnectToServer()
 end
 
+--[[
+// This packet is too large
+typedef struct
+{
+	/ *
+	In the old packet, 'version' is the first field. Now that field is set
+	to 255 always, so older versions won't be confused with the new
+	versions or vice-versa.
+	* /
+	UINT8 _255;
+	UINT8 packetversion;
+	char  application[MAXAPPLICATION];
+	UINT8 version;
+	UINT8 subversion;
+	UINT8 numberofplayer;
+	UINT8 maxplayer;
+	UINT8 refusereason; // 0: joinable, REFUSE enum
+	char gametypename[24];
+	UINT8 modifiedgame;
+	UINT8 cheatsenabled;
+	UINT8 flags;
+	UINT8 fileneedednum;
+	tic_t time;
+	tic_t leveltime;
+	char servername[MAXSERVERNAME];
+	char mapname[8];
+	char maptitle[33];
+	unsigned char mapmd5[16];
+	UINT8 actnum;
+	UINT8 iszone;
+	char httpsource[MAX_MIRROR_LENGTH];
+	UINT8 fileneeded[MAXFILENEEDED]; // is filled with writexxx (byteptr.h)
+} ATTRPACK serverinfo_pak;
+
+// Shorter player information for external use.
+typedef struct
+{
+	UINT8 num;
+	char name[MAXPLAYERNAME+1];
+	UINT8 address[4]; // sending another string would run us up against MAXPACKETLENGTH
+	UINT8 team;
+	UINT8 skin;
+	UINT8 data; // Color is first four bits, hasflag, isit and issuper have one bit each, the last is unused.
+	UINT32 score;
+	UINT16 timeinserver; // In seconds.
+} ATTRPACK plrinfo_pak;
+]]
+
 menus.Sonikm = Menu:new{
 	anchor = {x = "center", y = "top"},
 	width = FU * 320,
@@ -251,7 +299,7 @@ menus.Sonikm = Menu:new{
 		MenuItem_Box:new{width = FU * 300, height = FU * 54,
 			x_offset = 0, align = "center",
 			title_label = MenuItem_Text:new{colored = false},
-			subtitle_label = MenuItem_Text:new{colored = false, scale = FU * 2 / 3},
+			subtitle_label = MenuItem_Text:new{colored = false, scale = FU * 3 / 4, font = "TNYFN"},
 			
 			on_draw = function(self, x, y, width, height)
 				local menu = self.parent
@@ -289,9 +337,12 @@ menus.Sonikm = Menu:new{
 				elseif cl_mode == CL_VIEWSERVER then
 					self.visible = true
 					
+					local playernum = 0
 					for i = 0, #playerinfo do
 						if playerinfo[i] then
-							v.drawString(x + FU * 4, y + (i - 1) * FU * 10 + FU * 4, i..": "..playerinfo[i].name, V_ALLOWLOWERCASE, "fixed")
+							v.drawString(x + FU * 4, y + playernum * FU * 10 + FU * 4, i..". "..playerinfo[i].name, V_ALLOWLOWERCASE, "thin-fixed")
+							v.drawString(x + width - FU * 4, y + playernum * FU * 10 + FU * 4, playerinfo[i].score, V_ALLOWLOWERCASE, "thin-fixed-right")
+							playernum = $ + 1
 						end
 					end
 					
@@ -299,13 +350,17 @@ menus.Sonikm = Menu:new{
 			end
 		},
 		
-		MenuItem_UI_Button:new{body = "Byes", align = "center"},
-		MenuItem_UI_Button:new{body = "Yies", align = "center"},
-		MenuItem_UI_Button:new{body = "Myes", align = "center"},
-		MenuItem_UI_Button:new{body = "Mno", align = "center"},
-		MenuItem_UI_Button:new{body = "Nuhuh", align = "center"},
-		MenuItem_UI_Button:new{body = "Rno", align = "center"},
-		MenuItem_UI_Button:new{body = "Noo", align = "center"},
+-- 		MenuItem_UI_Button:new{body = "Byes", align = "center"},
+-- 		MenuItem_UI_Button:new{body = "Yies", align = "center"},
+-- 		MenuItem_UI_Button:new{body = "Myes", align = "center"},
+-- 		MenuItem_UI_Button:new{body = "Mno", align = "center"},
+-- 		MenuItem_UI_Button:new{body = "Nuhuh", align = "center"},
+-- 		MenuItem_UI_Button:new{body = "Rno", align = "center"},
+-- 		MenuItem_UI_Button:new{body = "Noo", align = "center"},
+		MenuItem_UI_Button:new{body = "Back", align = "center", action = function(button)
+			ShowPopup(serverlist[joinnode].info.servername, "No.")
+		end},
+		MenuItem_UI_Button:new{body = "Join", align = "center"},
 	},
 }
 
