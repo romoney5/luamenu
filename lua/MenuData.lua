@@ -1,6 +1,22 @@
 --the actual menu data
-local menus, v = ...
-loadfile("MenuData_Server.lua")(menus, v)
+
+setfenv(1, luamenu)
+
+--xorshift prng i found off of temu
+local randomState = 0xBADE4404
+local function __internal_prng__()
+	randomState = $ ^^ ($ >> 13)
+	randomState = $ ^^ ($ >> 11)
+	randomState = $ ^^ ($ << 21)
+
+	return ((randomState * 36548569) >> 4) & (FU - 1) --what the pigma
+end
+
+--not tested if this works perfectly
+local function M_RandomRange(a, b)
+	return ((__internal_prng__() * (b - a + 1)) >> FRACBITS) + a
+end
+
 
 local function new_menu(name, data)
 	menus[name] = data
@@ -68,6 +84,7 @@ menus.MainMenu = Menu:new{
 	items = {
 		MenuItem_Button:new{label = "1  Player", align = "center", link = "SingleplayerMenu"},
 		MenuItem_Button:new{label = "Multiplayer", align = "center", link = "MultiplayerMenu"},
+		MenuItem_Button:new{label = "Level Selecttwo...", link = "LevelSelect", spacing = FU * 8},
 		MenuItem_Button:new{label = "Extras", align = "center", link = "ExtrasMenu"},
 		MenuItem_Button:new{label = "Addons", align = "center", link = "AddonsMenu"},
 		MenuItem_Button:new{label = "Options", align = "center", link = "OptionsMenu"},
@@ -163,7 +180,7 @@ menus.SingleplayerMenu_StartGame_CharSelect = Menu:new{
 		local charfg = v.cachePatch("CHARFG")
 		
 		if abs(self.char_scroll) > FU / 4 then
-			self.char_scroll = $ - FixedMul(self.char_scroll / 4, v.deltaTics())
+			self.char_scroll = $ - FixedMul(self.char_scroll / 4, v.renderdeltatics())
 		else
 			self.char_scroll = 0
 		end
@@ -172,7 +189,7 @@ menus.SingleplayerMenu_StartGame_CharSelect = Menu:new{
 		
 		v.drawFill(0, 0, (v.width() - (320 * v.dupx())) / 2, v.height(), color.ramp[0 + 5 + 5]|V_NOSCALESTART)
 		
-		self.time = $ + v.deltaTics()
+		self.time = $ + v.renderdeltatics()
 		local y = (self.time / FU) % 32
 		
 		for i = -1, 1 do
@@ -325,6 +342,10 @@ menus.OptionsMenu_Luamenu = Menu:new{
 	},
 }]]
 
+local function ChangeControl(button)
+	ShowPopup(button.label, "Input a new key for \""..button.label.."\"...")
+end
+
 menus.OptionsMenu_P1Controls = Menu:new{
 	anchor = {x = "center", y = "top"},
 	width = FU * 320 - FU * 50 * 2,
@@ -340,7 +361,7 @@ menus.OptionsMenu_P1Controls = Menu:new{
 				MenuItem_Header:new{label = "'''''''''''''''''''''''''''"},
 				MenuItem_Header:new{label = "digo"},
 				MenuItem_Header:new{label = "Movement"},
-				MenuItem_Button:new{label = "Use Mouse", desc = "Enable mouse movement", cvar = CV_FindVar("use_mouse"), spacing = FU * 2 + FU * 10},
+				MenuItem_Button:new{label = "Move Forward", desc = "Move character forward", action = ChangeControl, spacing = FU * 2},
 			},
 		}), spacing = FU * 2},
 		MenuItem_Button:new{label = "Mouse Options...", desc = "Change mouse settings", link = new_menu("OptionsMenu_P1Controls_Mouse", Menu:new{

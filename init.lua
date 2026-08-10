@@ -3,6 +3,10 @@ local directory = { "/",
 	"Class.lua",
 	"Menu.lua",
 	
+	"MenuData.lua",
+	"MenuData_Server.lua",
+	"MenuData_LevelSelect.lua",
+	
 -- 	"TranslationTest.lua",
 }
 
@@ -17,6 +21,13 @@ local function load(dir, path)
 		end
 	end
 end
+
+--create the luamenu table first, all scripts will operate here
+rawset(_G, "luamenu", {})
+
+luamenu._G = _G
+luamenu.__index = _G
+setmetatable(luamenu, luamenu)
 
 load(directory, "")
 

@@ -2,7 +2,7 @@
 --this does rely on some custom native functions though, so if you don't have
 --the right build, this is as good as useless
 
-local menus, v = ...
+setfenv(1, luamenu)
 
 --network stuff is always gonna involve some loading,
 --the user deserves a pretty loading spinner
@@ -407,7 +407,7 @@ menus.Sonikm = Menu:new{
 		else
 		end
 		
-		if v.isNewTic() then
+		if v.renderisnewtic() then
 			if cl_mode == CL_SEARCHING then
 				CL_ServerConnectionSearchTicker()
 			elseif cl_mode == CL_ASKFULLFILELIST then
@@ -566,7 +566,9 @@ COM_AddCommand("join", function(player, ip, port) serv_connect(ip or "10.0.0.242
 --that's my laptop's ip by the way
 
 --for slow internet (TODO: there is a cvar for this, use NUMBER timeout)
-HTTP.setDefaultTimeout(20)
+if HTTP then
+	HTTP.setDefaultTimeout(20)
+end
 
 menus.ServerBowser = Menu:new{
 	anchor = {x = "center", y = "top"},

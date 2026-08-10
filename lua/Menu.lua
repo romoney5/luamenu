@@ -1,33 +1,35 @@
 --Me?
 --main menu logic
 
-if not gks_luamenu_supported then return end
-gks_luamenu = true
+setfenv(1, luamenu)
+--from now globals will be set in luamenu by default
 
-local cv_luamenu = CV_RegisterVar{name = "luamenu", defaultvalue = "On", PossibleValue = CV_OnOff, flags = CV_SAVE|CV_CALL, func = function(self)
-	gks_luamenu = self.value and true or false
+if not _G.gks_luamenu_supported then return end
+_G.gks_luamenu = true
+
+cv_luamenu = CV_RegisterVar{name = "luamenu", defaultvalue = "On", PossibleValue = CV_OnOff, flags = CV_SAVE|CV_CALL, func = function(self)
+	_G.gks_luamenu = self.value and true or false
 end}
 
-local menus = {}
+menus = {}
 
-local cv_menucaps = CV_FindVar("menucaps") or {value = 1}
-local cv_menucolor = CV_FindVar("menucolor") or {value = V_YELLOWMAP}
-local cv_menubgcolor = CV_FindVar("menubgcolor") or {value = 159}
+--placeholder banpyura cvars
+cv_menucaps = CV_FindVar("menucaps") or {value = 1}
+cv_menucolor = CV_FindVar("menucolor") or {value = V_YELLOWMAP}
+cv_menubgcolor = CV_FindVar("menubgcolor") or {value = 159}
 
-local cv_luamenu_bgdecos = CV_RegisterVar{name = "luamenu_bgdecos", defaultvalue = "On", PossibleValue = CV_OnOff, flags = CV_SAVE}
-local cv_luamenu_anims = CV_RegisterVar{name = "luamenu_anims", defaultvalue = "On", PossibleValue = CV_OnOff, flags = CV_SAVE}
-local cv_luamenu_tooltips = CV_RegisterVar{name = "luamenu_tooltips", defaultvalue = "On", PossibleValue = CV_OnOff, flags = CV_SAVE}
-local cv_luamenu_rounded = CV_RegisterVar{name = "luamenu_rounded", defaultvalue = "1", PossibleValue = {MIN = 0, MAX = FU * 4}, flags = CV_SAVE|CV_FLOAT}
-local cv_luamenu_sliders = CV_RegisterVar{name = "luamenu_sliders", defaultvalue = "On", PossibleValue = CV_OnOff, flags = CV_SAVE}
+cv_luamenu_bgdecos = CV_RegisterVar{name = "luamenu_bgdecos", defaultvalue = "On", PossibleValue = CV_OnOff, flags = CV_SAVE}
+cv_luamenu_anims = CV_RegisterVar{name = "luamenu_anims", defaultvalue = "On", PossibleValue = CV_OnOff, flags = CV_SAVE}
+cv_luamenu_tooltips = CV_RegisterVar{name = "luamenu_tooltips", defaultvalue = "On", PossibleValue = CV_OnOff, flags = CV_SAVE}
+cv_luamenu_rounded = CV_RegisterVar{name = "luamenu_rounded", defaultvalue = "1", PossibleValue = {MIN = 0, MAX = FU * 4}, flags = CV_SAVE|CV_FLOAT}
+cv_luamenu_sliders = CV_RegisterVar{name = "luamenu_sliders", defaultvalue = "On", PossibleValue = CV_OnOff, flags = CV_SAVE}
 
-local v = {}
+v = {}
 
-local current_menu = "MainMenu"
-local current_popup
+current_menu = "MainMenu"
+current_popup = nil
 
 local next_action
-
-local MenuClass = MenuClass
 
 local menu_time = 0
 local menu_enter_anim = FU
@@ -79,10 +81,10 @@ local function ScreenToDisplay(x, y)
 	return FixedMul(x - left, FixedDiv(base_width + left / 2, width)), FixedMul(y - top, FixedDiv(base_height + top / 2, height))
 end
 
-local function SetActive(active)
+function Menu_SetActive(active)
 	if active then
 		input.setMouseGrab(false)
-		menuactive = true
+		_G.menuactive = true
 		
 		if menus[current_menu] and menus[current_menu].on_entry then
 			menus[current_menu]:on_entry(old_menu)
@@ -93,7 +95,7 @@ local function SetActive(active)
 		end
 	else
 		input.setMouseGrab(true)
-		menuactive = false
+		_G.menuactive = false
 		current_menu = nil
 		current_popup = nil
 		
@@ -106,9 +108,8 @@ local function SetActive(active)
 	menu_enter_anim = FU
 	menu_exit_anim = FU
 end
-rawset(_G, "Menu_SetActive", SetActive)
 
-local function Menu_GotoLink(link)
+function Menu_GotoLink(link)
 	if not menus[link] then
 		ShowPopup("Menu_GotoLink", ("Could not find menu link \"%s\".\n\nThis menu may be unfinished."):format(tostring(link)))
 		return
@@ -133,11 +134,9 @@ local function Menu_GotoLink(link)
 		menu_exit_anim = FU
 	end
 end
-rawset(_G, "Menu_GotoLink", Menu_GotoLink)
 
 --menu page
-local Menu = MenuClass:inherit()
-rawset(_G, "Menu", Menu)
+Menu = MenuClass:inherit()
 
 function Menu:new(a)
 	local a = self.super:new(a)
@@ -273,7 +272,7 @@ function Menu:draw()
 		
 		--draw the cursor
 		if self.selection == i then
-			local speed = cv_luamenu_anims.value and v.deltaTics() * 3 / 4 or FU
+			local speed = cv_luamenu_anims.value and v.renderdeltatics() * 3 / 4 or FU
 			
 			self.cursor_position.x = ease.linear(speed, $, align + FixedMul(width, factor) - FU * (24 or 32)) --tied to fps
 			self.cursor_position.y = ease.linear(speed, $, py)
@@ -365,8 +364,7 @@ function Menu:scrollBy(scrollby)
 end
 
 --generic menu item
-local MenuItem = MenuClass:inherit()
-rawset(_G, "MenuItem", MenuItem)
+MenuItem = MenuClass:inherit()
 
 function MenuItem:new(a)
 	local a = self.super:new(a)
@@ -443,8 +441,7 @@ function MenuItem:activate(increment)
 end
 
 --menu text drawer
-local MenuItem_Text = MenuItem:inherit()
-rawset(_G, "MenuItem_Text", MenuItem_Text)
+MenuItem_Text = MenuItem:inherit()
 
 function MenuItem_Text:new(a)
 	local a = self.super:new(a)
@@ -622,8 +619,7 @@ function MenuItem_Text:draw(x, y)
 end
 
 --menu button
-local MenuItem_Button = MenuItem_Text:inherit()
-rawset(_G, "MenuItem_Button", MenuItem_Button)
+MenuItem_Button = MenuItem_Text:inherit()
 
 function MenuItem_Button:new(a)
 	local a = self.super:new(a)
@@ -646,7 +642,7 @@ function MenuItem_Text:drawArrows(x, y, col)
 	
 	--animation
 	local out = FU * 2
-	self.arrow_blink = (($ or 0) + v.deltaTics() / TICRATE * 4) % FU
+	self.arrow_blink = (($ or 0) + v.renderdeltatics() / TICRATE * 4) % FU
 	
 	if self.arrow_blink >= FU / 2 then
 		out = $ + FU
@@ -676,7 +672,7 @@ end
 
 function MenuItem_Button:activate(increment)
 	if self.link == "" then
-		SetActive(false)
+		Menu_SetActive(false)
 		return
 	end
 
@@ -694,8 +690,7 @@ function MenuItem_Button:activate(increment)
 end
 
 --menu slider
-local MenuItem_Slider = MenuItem_Text:inherit()
-rawset(_G, "MenuItem_Slider", MenuItem_Slider)
+MenuItem_Slider = MenuItem_Text:inherit()
 
 function MenuItem_Slider:new(a)
 	local a = self.super:new(a)
@@ -820,7 +815,7 @@ end
 
 function MenuItem_Slider:activate(increment)
 	if self.link == "" then
-		SetActive(false)
+		Menu_SetActive(false)
 		return
 	end
 
@@ -853,8 +848,7 @@ function MenuItem_Slider:activate(increment)
 end
 
 --menu textbox
-local MenuItem_Textbox = MenuItem_Text:inherit()
-rawset(_G, "MenuItem_Textbox", MenuItem_Textbox)
+MenuItem_Textbox = MenuItem_Text:inherit()
 
 function MenuItem_Textbox:new(a)
 	local a = self.super:new(a)
@@ -888,7 +882,7 @@ function MenuItem_Textbox:draw(x, y)
 	local text_padding = self.box.corner_size
 	
 	self.box_label.label = self.value
-	self.cursor_blink = $ + v.deltaTics()
+	self.cursor_blink = $ + v.renderdeltatics()
 	
 	if self.parent and self.parent.selection == self.index and (self.cursor_blink * 3 / TICRATE) % FU < FU / 2 then
 		self.box_label.label = $.."|"
@@ -930,8 +924,7 @@ function MenuItem_Textbox:onTextInput(text)
 end
 
 --menu header label
-local MenuItem_Header = MenuItem:inherit()
-rawset(_G, "MenuItem_Header", MenuItem_Header)
+MenuItem_Header = MenuItem:inherit()
 
 function MenuItem_Header:new(a)
 	local a = self.super:new(a)
@@ -984,8 +977,7 @@ end
 --rounded box
 --a lot of things inherit from this since things with backgrounds look much prettier
 --than just raw text on a screen
-local MenuItem_Box = MenuItem:inherit()
-rawset(_G, "MenuItem_Box", MenuItem_Box)
+MenuItem_Box = MenuItem:inherit()
 
 function MenuItem_Box:new(a)
 	local a = self.super:new(a)
@@ -1068,8 +1060,7 @@ function MenuItem_Box:draw(x, y)
 end
 
 --button, but infused with what i like to call.. ui slop
-local MenuItem_UI_Button = MenuItem_Box:inherit()
-rawset(_G, "MenuItem_UI_Button", MenuItem_UI_Button)
+MenuItem_UI_Button = MenuItem_Box:inherit()
 
 function MenuItem_UI_Button:new(a)
 	local a = self.super:new(a)
@@ -1144,9 +1135,9 @@ function MenuItem_UI_Button:draw(x, y)
 	end
 	
 	if self.scale < scale_target then
-		self.scale = min($ + FixedMul(scale_speed, v.deltaTics()), scale_target)
+		self.scale = min($ + FixedMul(scale_speed, v.renderdeltatics()), scale_target)
 	elseif self.scale > scale_target then
-		self.scale = max($ - FixedMul(scale_speed, v.deltaTics()), scale_target)
+		self.scale = max($ - FixedMul(scale_speed, v.renderdeltatics()), scale_target)
 	end
 	
 	self._last_pressed = pressed
@@ -1166,8 +1157,7 @@ end
 MenuItem_UI_Button.activate = MenuItem_Button.activate
 
 --sliding popup
-local MenuItem_Popup = MenuItem_Box:inherit()
-rawset(_G, "MenuItem_Popup", MenuItem_Popup)
+MenuItem_Popup = MenuItem_Box:inherit()
 
 function MenuItem_Popup:new(a)
 	local a = self.super:new(a)
@@ -1193,7 +1183,7 @@ end
 
 function MenuItem_Popup:draw(x, y)
 	if cv_luamenu_anims.value then
-		self.open_anim = min($ + v.deltaTics() / TICRATE * 4, FU)
+		self.open_anim = min($ + v.renderdeltatics() / TICRATE * 4, FU)
 	else
 		self.open_anim = FU
 	end
@@ -1245,15 +1235,14 @@ local function ShowPopup(title, message, buttons)
 	
 	current_popup = popup
 end
-rawset(_G, "ShowPopup", ShowPopup)
 
 
 
 
-local function DrawSpikes(rot, ox, oy, scroll, flags)
+local function DrawSpikes(rot, patch, ox, oy, scroll, flags)
 	local col = v.getColormap(nil, nil, "Menu_Translation_"..cv_menubgcolor.value - 2)
 	local bg2 = cachePatch("MENU_SPIKE")
-	local bg = v.cachePatch("MENU_SPIKE", -rot + ANGLE_90)
+	local bg = cachePatch(patch)
 	local dimension = bg2.height - 1
 	
 	for i = -2, FU * 400 / dimension / FU do
@@ -1296,7 +1285,7 @@ local function Input(key)
 	if name == "escape" then
 		if state == "game" and not menuactive then
 			current_menu = "SP_MainMenu"
-			SetActive(true)
+			Menu_SetActive(true)
 			
 			return
 		else
@@ -1326,7 +1315,7 @@ local function Input(key)
 				menu_exit_anim = 0
 			end
 		else
-			SetActive(false)
+			Menu_SetActive(false)
 		end
 		
 		return
@@ -1336,7 +1325,7 @@ local function Input(key)
 			
 			current_menu = "MainMenu"
 			
-			SetActive(true)
+			Menu_SetActive(true)
 		end
 		
 		return
@@ -1421,7 +1410,6 @@ end)
 
 local mouse_pressed = false
 local mouse_drag = {x = 0, y = 0, dragging = false, start_scroll = 0, updates = 0, prev_x = 0, prev_y = 0}
-loadfile("MenuData.lua")(menus, v)
 
 local function Drawer(drawer, player)
 	if not gks_luamenu then return end
@@ -1435,14 +1423,23 @@ local function Drawer(drawer, player)
 		for i, fun in pairs(drawer) do
 			v[i] = fun
 		end
+		
+		v.drawFixedFill = $ or function(x, y, width, height, color)
+			--v.drawFill(x / FU, y / FU, width / FU, height / FU, color)
+			
+			local patch = cachePatch("MENU_PIXEL")
+			local colormap = v.getColormap(nil, nil, "Menu_Translation_"..(color & 255))
+			
+			v.drawStretched(x, y, width, height, patch, color & ~255, colormap)
+		end
 	end
 	
 	v.fadeScreen(0xFF00, 16)
 	
-	menu_time = $ + v.deltaTics()
+	menu_time = $ + v.renderdeltatics()
 	
-	menu_enter_anim = min($ + v.deltaTics() / 10, FU)
-	menu_exit_anim = min($ + v.deltaTics() / 10, FU)
+	menu_enter_anim = min($ + v.renderdeltatics() / 10, FU)
+	menu_exit_anim = min($ + v.renderdeltatics() / 10, FU)
 	
 	current_menu = $ or "MainMenu"
 	
@@ -1459,7 +1456,7 @@ local function Drawer(drawer, player)
 			mouse_drag.updates = ($ or 0) + 1
 		end
 		
-		if v.isNewTic() then
+		if v.renderisnewtic() then
 			mouse_drag.dx, mouse_drag.dy = mouse_drag.prev_x - mx, mouse_drag.prev_y - my
 		end
 		
@@ -1476,8 +1473,8 @@ local function Drawer(drawer, player)
 -- 		menu.scroll = mouse_drag.start_scroll + mouse_drag.y - my
 -- 		menu.dest_scroll_time = FU
 -- 		menu.dest_scroll = menu.scroll
-		if v.isNewTic() and mouse_drag.dragging then
-			menu.scroll_vel = FixedMul(-my + mouse_drag.prev_y, v.deltaTics())--mouse_drag.y - my
+		if v.renderisnewtic() and mouse_drag.dragging then
+			menu.scroll_vel = FixedMul(-my + mouse_drag.prev_y, v.renderdeltatics())--mouse_drag.y - my
 		end
 		
 		mouse_pressed = true
@@ -1530,7 +1527,7 @@ local function Drawer(drawer, player)
 		mouse_pressed = false
 	end
 	
-	if v.isNewTic() then
+	if v.renderisnewtic() then
 		mouse_drag.prev_x, mouse_drag.prev_y = mx, my
 	end
 	
@@ -1567,13 +1564,13 @@ local function Drawer(drawer, player)
 	if menu.scroll_vel then
 		menu.dest_scroll_time = FU
 		menu.dest_scroll = menu.scroll
-		menu.scroll_vel = max(abs($) - v.deltaTics() / 5, 0) * ($ < 0 and -1 or 1)
+		menu.scroll_vel = max(abs($) - v.renderdeltatics() / 5, 0) * ($ < 0 and -1 or 1)
 	end
 	
 	if cv_luamenu_bgdecos.value then
 		local speed = FU / TICRATE / 2
-		DrawSpikes(ANG1 * 10, 0, FU * 155, (FixedMul(menu_time, speed) + menu.scroll / 64) % FU, V_SNAPTOBOTTOM|V_SNAPTOLEFT)
-		DrawSpikes(ANG1 * 10 + ANGLE_180, FU * 270, FU * 40, (FixedMul(menu_time, speed) + menu.scroll / 64) % FU, V_SNAPTOTOP|V_SNAPTORIGHT)
+		DrawSpikes(ANG1 * 10, "MENU_SPIKE_2", 0, FU * 155, (FixedMul(menu_time, speed) + menu.scroll / 64) % FU, V_SNAPTOBOTTOM|V_SNAPTOLEFT)
+		DrawSpikes(ANG1 * 10 + ANGLE_180, "MENU_SPIKE_3", FU * 270, FU * 40, (FixedMul(menu_time, speed) + menu.scroll / 64) % FU, V_SNAPTOTOP|V_SNAPTORIGHT)
 	end
 	
 	--to differentiate the two
@@ -1601,7 +1598,7 @@ addHook("MenuThinker", function()
 		local active = action()
 		
 		if active ~= nil then
-			SetActive(active)
+			Menu_SetActive(active)
 		end
 	end
 end)
