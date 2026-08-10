@@ -70,6 +70,80 @@ menus.SingleplayerMenu_StartGame = Menu:new{
 		end
 		
 		--M_LoadSelect
+		if name == "enter" then
+			Menu_GotoLink("SingleplayerMenu_StartGame_CharSelect")
+		end
+		
+		return true
+	end,
+}
+
+menus.SingleplayerMenu_StartGame_CharSelect = Menu:new{
+	anchor = {x = "center", y = "bottom"},
+	
+	items = {
+	},
+	
+	on_entry = function(self, old_menu)
+		S_ChangeMusic("_chsel", true)
+	end,
+	
+	on_exit = function(self, old_menu)
+		S_ChangeMusic("_title")
+	end,
+	
+	char_scroll = 0,
+	time = 0,
+	
+	on_draw = function(self, v)
+		local skin = skins[0]
+		local color
+		
+		if skin.prefoppositecolor then
+			color = skincolors[skin.prefoppositecolor]
+		else
+			color = skincolors[skincolors[skin.prefcolor].invcolor]
+		end
+		
+		local colormap = v.getColormap(nil, #color)
+		local charbg = v.cachePatch("CHARBG")
+		local charfg = v.cachePatch("CHARFG")
+		
+		if abs(self.char_scroll) > FU / 4 then
+			self.char_scroll = $ - FixedMul(self.char_scroll / 4, v.deltaTics())
+		else
+			self.char_scroll = 0
+		end
+		
+		v.drawFill(0, 0, 320, 200, color.ramp[0 + 5])
+		
+		v.drawFill(0, 0, (v.width() - (320 * v.dupx())) / 2, v.height(), color.ramp[0 + 5 + 5]|V_NOSCALESTART)
+		
+		self.time = $ + v.deltaTics()
+		local y = (self.time / FU) % 32
+		
+		for i = -1, 1 do
+			v.draw(0, y + charbg.height * i, charbg, V_SNAPTOTOP, colormap)
+		end
+		
+		for i = -1, 1 do
+			v.draw(0, -y + charfg.height * i, charfg, V_SNAPTOTOP, colormap)
+		end
+		
+		v.drawFill(charfg.width, 0, v.width(), v.height(), color.ramp[0 + 5 + 5]|V_SNAPTOTOP)
+	end,
+	
+	on_input = function(self, key, name)
+		local scrollby = 0
+		if name == "right arrow" then scrollby = 1 end
+		if name == "left arrow" then scrollby = -1 end
+		
+		if scrollby then
+			self.save_select = $ + scrollby
+			self.save_scroll = $ + scrollby * FU * 100
+		end
+		
+		--M_LoadSelect
 		
 		return true
 	end,
@@ -145,14 +219,24 @@ menus.ServerBowser = Menu:new{
 		
 		self:updateItems()
 		
-		if true then
+		if not HTTP then
 -- 			ShowPopup("LEGO Island", "Oops! You have to put the CD\nin your computer.")
-			ShowPopup("Server Bowser", "Please note that the Server\nBowser is incomplete.")
+			ShowPopup("Server Bowser", "You do not have a custom build\nwith HTTP request functionality.")
 			
--- 			return
+			return
 		end
 		
-		if not HTTP then print("Not contacting the master server.") return end
+		local function handleResponseError(response)
+			if not response then
+				ShowPopup("Server Bowser", "Failed to fetch from HTTP.\nPlease try again.")
+				return
+			end
+			
+			if response.message then
+				print("error:", response.message)
+				return
+			end
+		end
 		
 		local function connect(button)
 			local server = button.ms_server
@@ -169,10 +253,7 @@ menus.ServerBowser = Menu:new{
 			
 			HTTP.get(("%s/rooms/%d/servers"):format(masterserver.string, button.ms_id), function(response)
 				self.loading = false
-				if response.message then
-					print("error:", response.message)
-					return
-				end
+				handleResponseError(response)
 				
 				local body = HTTP.decodeURL(response.body)
 				local servs = {}
@@ -215,11 +296,7 @@ menus.ServerBowser = Menu:new{
 		
 		local function get_rooms(response)
 			self.loading = false
-			
-			if response.message then
-				print("error:", response.message)
-				return
-			end
+			handleResponseError(response)
 			
 			local body = HTTP.decodeURL(response.body)
 			local rooms = {}
@@ -274,12 +351,7 @@ menus.ServerBowser = Menu:new{
 		end
 		
 		local function get_version(response)
-			if response.message then
-				print("error:", response.message)
-				return
-			end
-			
-			print(response.body)
+			handleResponseError(response)
 			
 			self.items = {
 				MenuItem_Header:new{label = "Loading rooms..."},

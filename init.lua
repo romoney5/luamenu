@@ -17,10 +17,6 @@ local function load(dir, path)
 		if type(v) == "string" then
 			dofile(path..v)
 		elseif type(v) == "table" then
-			if v[1]:sub(1, 4) == "DEMO" and Orbit.IsDemoBuild then
-				continue
-			end
-			
 			load(v, path..v[1].."/")
 		end
 	end

@@ -24,9 +24,17 @@ local function SetActive(active)
 		if menus[current_menu] and menus[current_menu].on_entry then
 			menus[current_menu]:on_entry(old_menu)
 		end
+		
+		if JNI_SetTouchVisible then
+			JNI_SetTouchVisible(false)
+		end
 	else
 		input.setMouseGrab(true)
 		menuactive = false
+		
+		if JNI_SetTouchVisible then
+			JNI_SetTouchVisible(true)
+		end
 	end
 end
 
@@ -34,6 +42,24 @@ local function ShowPopup(title, message)
 	current_popup = {title = title, message = message}
 end
 rawset(_G, "ShowPopup", ShowPopup)
+
+local function Menu_GotoLink(link)
+	assert(menus[link], ("MenuItem_Button:activate: Could not resolve menu link \"%s\"."):format(tostring(link)))
+
+	local old_menu = current_menu
+
+	if menus[current_menu].on_exit then
+		menus[current_menu]:on_exit(link)
+	end
+
+	current_menu = link
+	menus[current_menu].parent = old_menu
+
+	if menus[current_menu].on_entry then
+		menus[current_menu]:on_entry(old_menu)
+	end
+end
+rawset(_G, "Menu_GotoLink", Menu_GotoLink)
 
 --menu page
 local Menu = MenuClass:inherit()
@@ -442,16 +468,7 @@ function MenuItem_Button:activate(increment)
 	end
 
 	if self.link then
-		assert(menus[self.link], ("MenuItem_Button:activate: Could not resolve menu link \"%s\"."):format(tostring(self.link)))
-		
-		local old_menu = current_menu
-		
-		current_menu = self.link
-		menus[current_menu].parent = old_menu
-		
-		if menus[current_menu].on_entry then
-			menus[current_menu]:on_entry(old_menu)
-		end
+		Menu_GotoLink(self.link)
 	end
 	
 	if self.cvar then
@@ -564,6 +581,11 @@ local function Input(key)
 		
 		if menu.parent then
 			assert(menus[menu.parent], ("Input: Could not resolve menu back link \"%s\"."):format(tostring(menu.parent))) --r
+
+			if menus[current_menu].on_exit then
+				menus[current_menu]:on_exit(menu.parent)
+			end
+			
 			current_menu, menu.parent = menu.parent, nil
 		else
 			SetActive(false)
@@ -715,6 +737,8 @@ local function Drawer(drawer, player)
 		v.drawString(x, y - height / 2 - FU * 4, popup.title, V_ALLOWLOWERCASE, "fixed-center")
 		v.drawString(x, y - height / 2 + FU * 8, popup.message, V_ALLOWLOWERCASE, "fixed-center")
 	end
+	
+-- 	v.drawScaled(mx, my, FU, v.cachePatch("M_CURSOR"), 0)
 end
 
 addHook("MenuThinker", function()
