@@ -6,12 +6,28 @@ local menus, v = ...
 
 --network stuff is always gonna involve some loading,
 --the user deserves a pretty loading spinner
+local cv_menubgcolor = CV_FindVar("menubgcolor") or {value = 159} --TODO: standardize
+local spinner_time = 0
+local spinner_spin = 0
+
 local function DrawSpinner()
 	local bg = v.cachePatch("MENU_LOAD1")
 	v.drawScaled(FU * 160, FU * 100, FU / 2, bg, V_50TRANS)
 	
-	local spinner = v.cachePatch("MENU_LOAD2", FixedAngle(FU * leveltime * -8))
-	v.drawScaled(FU * 160, FU * 100, FU / 2, spinner, 0)
+	local speed = sin(FixedAngle(spinner_time * 5)) * 2 / 3 + FU * 3 / 2
+	spinner_time = $ + v.deltaTics()
+	spinner_spin = $ - FixedAngle(FixedMul(v.deltaTics(), speed) * 8)
+	local angle = spinner_spin
+	local spinner = v.cachePatch("MENU_ROUND")
+	
+	local speed2 = cos(FixedAngle(spinner_time * 5)) * 2 / 3 + FU
+	local amount = speed2 / (FU / 25)
+	
+	for i = -amount * 3 / 2, amount / 2 do
+		local newangle = -(angle + i * ANG1 * 2)
+		local dist = FU * 16 + FU / 2
+		v.drawScaled(FU * 160 + FixedMul(cos(newangle), dist), FU * 100 + FixedMul(sin(newangle), dist), FU / 32, spinner, 0, v.getColormap(nil, nil, "Menu_Translation_"..(cv_menubgcolor.value - 6)))
+	end
 end
 
 --server bowser
@@ -103,8 +119,8 @@ local function CL_ServerConnectionSearchTicker()
 	local i = 0
 	
 	if serverlistcount > 0 then
-		print("count = "..serverlistcount)
-		print("netgame = "..tostring(netgame))
+-- 		print("count = "..serverlistcount)
+-- 		print("netgame = "..tostring(netgame))
 		if servernode == -1 or servernode >= MAXNETNODES then
 			i = 0
 			
@@ -156,7 +172,7 @@ local function CL_ServerConnectionSearchTicker()
 			ChangeServMusic(servmus_1, true,false);
 			]]
 			
-			print("CL_ServerConnectionSearchTicker: reached CL_VIEWSERVER")
+-- 			print("CL_ServerConnectionSearchTicker: reached CL_VIEWSERVER")
 			print(info.servername)
 			cl_mode = CL_VIEWSERVER
 			D_ParseFileneeded(info.fileneedednum, info.fileneeded, 0) --native
@@ -173,6 +189,8 @@ local function CL_ServerConnectionSearchTicker()
 	end
 end
 
+local viewip = ""
+
 local function CL_ConnectToServer()
 	print("Contacting the server...")
 	
@@ -183,10 +201,13 @@ local function CL_ConnectToServer()
 end
 
 local function serv_connect(ip, port)
+	menuactive = true
 	Menu_GotoLink("Sonikm")
+	print("Connecting to.. "..ip..", "..port)
+	viewip = ip..":"..port
 	
 	I_NetOpenSocket() --native
-	SetMultiplayer() --native
+-- 	SetMultiplayer() --native
 	
 	servernode = I_NetMakeNodewPort(ip, port) --native
 	
@@ -194,14 +215,14 @@ local function serv_connect(ip, port)
 end
 
 menus.Sonikm = Menu:new{
+	anchor = {x = "center", y = "top"},
+	width = FU * 320,
+	
 	on_draw = function(self, v)
-		v.drawString(0, 0, "Conedcting", V_ALLOWLOWERCASE)
-		
 		if cl_mode == CL_SEARCHING--[[self.loading]] then
-			DrawSpinner()
+-- 			v.drawString(160, 55, "Connecting to...", V_ALLOWLOWERCASE, "center")
+-- 			v.drawString(160, 65, viewip, V_ALLOWLOWERCASE, "center")
 		else
-			v.drawString(0, 10, serverlist[joinnode].info.servername, V_ALLOWLOWERCASE)
-			v.drawString(0, 20, serverlist[joinnode].info.maptitle, V_ALLOWLOWERCASE)
 		end
 		
 		if v.isNewTic() then
@@ -224,6 +245,35 @@ menus.Sonikm = Menu:new{
 			Net_CloseConnection(servernode)
 		end
 	end,
+	
+	items = {
+		MenuItem_Box:new{width = FU * 300, height = FU * 54,
+			x_offset = 0, align = "center",
+			title_label = MenuItem_Text:new{colored = false},
+			on_draw = function(self, x, y, width, height)
+				local menu = self.parent
+				
+				if cl_mode == CL_SEARCHING then
+					self.title_label.label = "Connecting to...\n"..viewip
+					
+					self.title_label:draw(x + FU * 4, y + FU * 4)
+					
+					DrawSpinner()
+				elseif cl_mode == CL_VIEWSERVER then
+					v.drawString(0, 10, serverlist[joinnode].info.servername, V_ALLOWLOWERCASE)
+					v.drawString(0, 20, serverlist[joinnode].info.maptitle, V_ALLOWLOWERCASE)
+					
+					local y = 30
+					
+					for i = 0, #playerinfo do
+						if playerinfo[i] then
+							v.drawString(0, y + i * 10, i..": "..playerinfo[i].name, V_ALLOWLOWERCASE)
+						end
+					end
+					
+				end
+			end},
+	},
 }
 
 --thax https://gist.github.com/jaredallard/ddb152179831dd23b230
@@ -241,9 +291,10 @@ local function string_split(self, delimiter)
 	return result
 end
 
-COM_AddCommand("join", function(player, ip, port) serv_connect(ip, port) end, COM_LOCAL)
+COM_AddCommand("join", function(player, ip, port) serv_connect(ip or "10.0.0.242", port or "5029") end, COM_LOCAL)
+--that's my laptop's ip by the way
 
---for slow internet (there is a cvar for this, use NUMBER timeout)
+--for slow internet (TODO: there is a cvar for this, use NUMBER timeout)
 HTTP.setDefaultTimeout(20)
 
 menus.ServerBowser = Menu:new{
@@ -294,7 +345,6 @@ menus.ServerBowser = Menu:new{
 			local ip = server.ip
 			local port = server.port
 -- 			ip = "10.0.0.242"
-			print("CONNECTING "..ip..", "..port)
 			serv_connect(ip, port)
 		end
 		
@@ -341,7 +391,7 @@ menus.ServerBowser = Menu:new{
 				}
 				
 				for i, server in ipairs(servs) do
-					table.insert(self.items, MenuItem_Button:new{label = ("%s (%s:%s)"):format(server.name, server.ip, server.port),
+					table.insert(self.items, MenuItem_Button:new{label = server.name,
 						spacing = FU * 2, action = connect, ms_server = server})
 				end
 				

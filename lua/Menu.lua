@@ -269,6 +269,8 @@ function MenuItem:new(a)
 	a.pre_spacing = $ or 0
 	a.spacing = $ or 0
 	
+	a.visible = $
+	if a.visible == nil then a.visible = true end
 	
 	a.align_string = $ or ""
 	
@@ -293,6 +295,7 @@ function MenuItem:getAlignment()
 	
 	local parent_width = self.parent and self.parent.width or 0
 	
+	local width, height = self:getBounds()
 	local x = 0
 	local factor = -FU / 2
 	
@@ -392,6 +395,8 @@ function MenuItem_Text:draw(x, y)
 	local col = v.getStringColormap(flags)
 	local uppercase = cv_menucaps.value
 	
+	local lines = 0
+	
 	--run twice; once to calculate the width, once to draw
 	for draw = 0, 1 do
 		width = 0
@@ -421,12 +426,18 @@ function MenuItem_Text:draw(x, y)
 				local patch = cache[patchname]
 				
 				if draw then
-					v.drawScaled(x + width, y, FU, patch, 0, col)
+					v.drawScaled(x + width, y + lines * FU * 10, FU, patch, 0, col)
 				end
 				
 				width = $ + FU * patch.width
 			else
 				width = $ + FU * 4
+			end
+			
+			--TODO: proper newline alignment
+			if draw and char == "\n" then
+				width = 0
+				lines = $ + 1
 			end
 		end
 		
@@ -522,6 +533,77 @@ function MenuItem_Header:draw(x, y)
 	local width = FU * 320 - new_x * 2
 	v.drawFixedFill(new_x, y, width + FU, FU * 1 + FU, 26) --shadow
 	v.drawFixedFill(new_x, y, width, FU * 1, 72) --line
+end
+
+--rounded box
+
+local MenuItem_Box = MenuItem:inherit()
+rawset(_G, "MenuItem_Box", MenuItem_Box)
+
+function MenuItem_Box:new(a)
+	local a = self.super:new(a)
+	setmetatable(a, self)
+	
+	a.label = $ or "Button"
+	a.width = $ or FU * 50
+	a.height = $ or FU * 50
+	a.color = $
+	a.corner_size = $ or FU * 5
+	
+	a.x_offset = $ or 0
+	
+	a.on_draw = $ or nil
+	
+	return a
+end
+
+function MenuItem_Box:getBounds()
+	return self.width, self.height
+end
+
+function MenuItem_Box:canSelect()
+	return false
+end
+
+function MenuItem_Box:draw(x, y)
+	local width, height = self:getBounds()
+	x = $ + self.x_offset - width / 2
+	
+	local og_x, og_y, og_width, og_height = x, y, width, height
+	local corner_size = self.corner_size
+	
+	x, y = $ + corner_size, $ + corner_size
+	width, height = $ - corner_size * 2, $ - corner_size * 2
+	
+	local color = self.color
+	
+	if color == nil then
+		color = cv_menubgcolor.value
+	end
+	
+	v.drawFixedFill(x, y, width, height, color)
+	
+	local colormap = v.getColormap(nil, nil, "Menu_Translation_"..color)
+	
+	local round = v.cachePatch("MENU_ROUND") --TODO: override cachepatch
+	local round_width = round.width - round.leftoffset
+	v.drawScaled(x, y, corner_size / round_width, round, 0, colormap) --top-left corner
+	v.drawScaled(x + width, y, corner_size / round_width, round, V_FLIP, colormap) --top-right corner
+-- 	v.drawFixedFill(x, y - corner_size, width, corner_size, self.color) --top edge
+	
+	local roundu = round
+	v.drawScaled(x, y + height, corner_size / round_width, roundu, V_FLIP, colormap) --bottom-left corner
+	v.drawScaled(x + width, y + height, corner_size / round_width, roundu, 0, colormap) --bottom-right corner
+-- 	v.drawFixedFill(x, y + height, width, corner_size, self.color) --bottom edge
+	
+-- 	v.drawFixedFill(x - corner_size, y, corner_size, height, self.color) --left edge
+-- 	v.drawFixedFill(x + width, y, corner_size, height, self.color) --right edge
+	v.drawFixedFill(x, y - corner_size, width, height + corner_size * 2, color) --top/bottom edges
+	v.drawFixedFill(x - corner_size, y, width + corner_size * 2, height, color) --left/right edges
+	
+	if self.on_draw then
+		self:on_draw(og_x, og_y, og_width, og_height)
+	end
 end
 
 
@@ -647,6 +729,8 @@ end
 local mouse_pressed = false
 loadfile("MenuData.lua")(menus, v)
 
+local menu_time = 0
+
 local function Drawer(drawer, player)
 -- 	local serverlistcount = #serverlist
 -- 	print(serverlistcount, servernode)
@@ -661,15 +745,18 @@ local function Drawer(drawer, player)
 	
 	v.fadeScreen(0xFF00, 16)
 	
+	menu_time = $ + v.deltaTics()
+	
 	local menu = menus[current_menu]
 	assert(menu, ("Drawer: Invalid menu \"%s\"!"):format(tostring(current_menu)))
 	
 	local mx, my = input.getCursorPosition() --dup
 	mx, my = $ * FU, $ * FU
-	local _, dupx = v.dupx()
-	local _, dupy = v.dupy()
-	mx, my = FixedDiv($, dupx), FixedDiv($, dupy)
--- 	v.drawString(20, 20, (mx / FU).." "..(my / FU))
+-- 	local _, dupx = v.dupx()
+-- 	local _, dupy = v.dupy()
+-- 	mx, my = FixedDiv($, dupx), FixedDiv($, dupy)
+-- 	v.drawString(20, 10, (mx / FU).." "..(my / FU))
+-- 	v.drawString(20, 20, v.width())
 	
 	if (mouse.buttons & MB_BUTTON1) then
 		if not mouse_pressed then--or true then
@@ -719,8 +806,8 @@ local function Drawer(drawer, player)
 	end
 	
 	local speed = FU / TICRATE / 2
-	DrawSpikes(ANG1 * 10, 0, FU * 155, (leveltime * speed + menu.scroll / 64) % FU, V_SNAPTOBOTTOM|V_SNAPTOLEFT)
-	DrawSpikes(ANG1 * 10 + ANGLE_180, FU * 270, FU * 40, (leveltime * speed + menu.scroll / 64) % FU, V_SNAPTOTOP|V_SNAPTORIGHT)
+	DrawSpikes(ANG1 * 10, 0, FU * 155, (FixedMul(menu_time, speed) + menu.scroll / 64) % FU, V_SNAPTOBOTTOM|V_SNAPTOLEFT)
+	DrawSpikes(ANG1 * 10 + ANGLE_180, FU * 270, FU * 40, (FixedMul(menu_time, speed) + menu.scroll / 64) % FU, V_SNAPTOTOP|V_SNAPTORIGHT)
 	
 	--to differentiate the two
 	if menu.show_version then
@@ -745,7 +832,7 @@ local function Drawer(drawer, player)
 		v.drawString(x, y - height / 2 + FU * 8, popup.message, V_ALLOWLOWERCASE, "fixed-center")
 	end
 	
--- 	v.drawScaled(mx, my, FU, v.cachePatch("M_CURSOR"), 0)
+-- 	v.drawScaled(mx, my, FU, v.cachePatch("M_CURSOR"), V_NOSCALEPATCH|V_NOSCALESTART)
 end
 
 addHook("MenuThinker", function()

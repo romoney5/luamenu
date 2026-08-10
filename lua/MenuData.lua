@@ -311,43 +311,6 @@ menus.OptionsMenu_Network = Menu:new{
 
 --singleplayer esc menu
 
-local MenuItem_Box = MenuItem:inherit()
-
-function MenuItem_Box:new(a)
-	local a = self.super:new(a)
-	setmetatable(a, self)
-	
-	a.label = $ or "Button"
-	a.width = $ or FU * 50
-	a.height = $ or FU * 50
-	a.color = $ or 159
-	
-	a.x_offset = $ or 0
-	
-	a.on_draw = $ or nil
-	
-	return a
-end
-
-function MenuItem_Box:getBounds()
-	return self.width, self.height
-end
-
-function MenuItem_Box:canSelect()
-	return false
-end
-
-function MenuItem_Box:draw(x, y)
-	local width, height = self:getBounds()
-	x = $ + self.x_offset
-	
-	v.drawFixedFill(x, y, width, height, self.color)
-	
-	if self.on_draw then
-		self:on_draw(x, y, width, height)
-	end
-end
-
 menus.SP_MainMenu = Menu:new{
 	anchor = {x = "center", y = "center"},
 	show_version = true,
@@ -362,7 +325,8 @@ menus.SP_MainMenu = Menu:new{
 	end,
 	
 	items = {
-		MenuItem_Box:new{width = FU * 262, height = FU * 54, spacing = FU * 13, x_offset = FU * -8,
+		MenuItem_Box:new{width = FU * 262, height = FU * 54, spacing = FU * 13,
+			align = "center",
 			level_title_label = MenuItem_Text:new{colored = true},
 			on_draw = function(self, x, y, width, height)
 				local info = mapheaderinfo[gamemap]
