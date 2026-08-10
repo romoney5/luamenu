@@ -6,6 +6,10 @@ local mouse_drag = {x = 0, y = 0, dragging = false, start_scroll = 0, updates = 
 
 Menu = MenuClass:inherit()
 
+local function hybridPadding()
+	return FU * 3 / 2 + pref_luamenu_rounded.value / 2
+end
+
 function Menu:new(a)
 	local a = self.super:new(a)
 	setmetatable(a, self)
@@ -83,6 +87,7 @@ function Menu:resetScroll()
 	self.dest_scroll = 0
 end
 
+--TODO: scrolling is tied to fps
 function Menu:updateScroll()
 	local mx, my = ScreenToDisplay(input.getCursorPosition())
 	
@@ -187,7 +192,7 @@ function Menu:updateScroll()
 		self.scroll_vel = max(abs($) - v.renderdeltatics() / 5, 0) * ($ < 0 and -1 or 1)
 	end
 	
-	if cv_luamenu_anims.value then
+	if pref_luamenu_anims.value then
 		self.dest_scroll_time = min($ + v.renderdeltatics() / 5, FU)
 	else
 		self.dest_scroll_time = FU
@@ -241,7 +246,7 @@ function Menu:draw()
 	local x, y = self:getPosition()
 	
 	--to differentiate the two
-	if self.show_version and cv_luamenu_showversion.value then
+	if self.show_version and pref_luamenu_showversion.value then
 		v.drawString(0 + FU * 8, FU * 200 - FU * 8 - FU * 8, VERSIONSTRING.." luamenu", V_TRANSLUCENT|V_ALLOWLOWERCASE|V_SNAPTOLEFT|V_SNAPTOBOTTOM, "thin-fixed")
 	end
 	
@@ -256,7 +261,7 @@ function Menu:draw()
 	--draw header
 	if self.title_label then
 		self.title_label.label = self.title
-		if cv_luamenu_anims.value then
+		if pref_luamenu_anims.value then
 			self.title_label.scale = max(FU - self.scroll / 512, 0)
 			self.title_label:draw(x, y - FU * 35 + self.scroll / 4)
 		else
@@ -267,6 +272,55 @@ function Menu:draw()
 	
 	--this needs to be separate from getPosition because of the header
 	x = $ + self.x_offset
+	
+	--draw hybrid mode boxes
+	if pref_luamenu_layoutmode.value >= 2 then
+		local hybrid_box_positions = {}
+		local box_index = 1
+		local padding = hybridPadding() * 3 / 2
+		
+		for i, item in ipairs(self.items) do
+			local py = self:getYPositionAt(i)
+			local align, align_string, factor = item:getAlignment()
+-- 			local width, height = item:getBounds()
+			local height = self:getHeightOf(i)
+			local spacing_threshold = FU * 2
+			height = $ + min(spacing_threshold, item.spacing)
+			
+			if item:canSelect() then
+				hybrid_box_positions[box_index] = $ or {width = self.width, height = -padding, x = align, y = py}
+				
+				hybrid_box_positions[box_index].height = $ + height
+			end
+			
+			if (not item:canSelect() or item.spacing > spacing_threshold) and hybrid_box_positions[box_index] then
+				box_index = $ + 1
+			end
+			
+-- 			local align_x = FixedMul(FixedMul(width, factor), item.scale or FU)
+-- 			width = self.width
+-- 			v.drawFixedFill(x + align + align_x - FU, y + py - FU, width + FU * 2, height + FU * 2, cv_menubgcolor.value) --top/bottom edges
+		end
+		
+		local corner_size = FixedMul(FU * 5, pref_luamenu_rounded.value)
+		for i, box in ipairs(hybrid_box_positions) do
+			local width = box.width + padding * 2
+			local height = box.height + padding * 2
+			local fixed_corner_size = min(min(corner_size, height / 2), width / 2)
+			MenuItem_Box:drawBox(x + box.x - padding, y + box.y - padding, width, height, cv_menubgcolor.value - 1, fixed_corner_size)
+		end
+		
+-- 		for i, v in ipairs(hybrid_box_info) do
+-- 			local item = self.items[i]
+-- 			local py = self:getYPositionAt(i)
+-- 			local align, align_string, factor = item:getAlignment()
+-- 			local width, height = item:getBounds()
+-- 			local align_x = FixedMul(FixedMul(width, factor), item.scale or FU)
+-- 			width = self.width
+-- 			height = $ + min(FU * 2, item.spacing)
+-- 			v.drawFixedFill(x + align + align_x - FU, y + py - FU, width + FU * 2, height + FU * 2, cv_menubgcolor.value) --top/bottom edges
+-- 		end
+	end
 	
 	--draw all items
 	for i, item in ipairs(self.items) do
@@ -279,7 +333,7 @@ function Menu:draw()
 		
 		--draw the cursor
 		if self.selection == i then
-			local speed = cv_luamenu_anims.value and v.renderdeltatics() * 3 / 4 or FU
+			local speed = pref_luamenu_anims.value and v.renderdeltatics() * 3 / 4 or FU
 			
 			self.cursor_position.x = ease.linear(speed, $, align + FixedMul(width, factor) - FU * (24 or 32)) --tied to fps
 			self.cursor_position.y = ease.linear(speed, $, py)
@@ -289,7 +343,7 @@ function Menu:draw()
 	end
 	
 	--draw classic tooltip
-	if self.items[self.selection] and cv_luamenu_tooltips.value then
+	if self.items[self.selection] and pref_luamenu_tooltips.value then
 		local desc = self.items[self.selection].desc
 		
 		if desc then
@@ -317,12 +371,26 @@ function Menu:getYPositionAt(index)
 			return y
 		end
 		
-		local width, height = item:getBounds()
+		local height = self:getHeightOf(i)
 		
 		y = $ + height + item.spacing
 	end
 	
 	return y
+end
+
+function Menu:getHeightOf(index)
+	local item = self.items[index]
+	
+	assert(item, "Menu:getHeightOf: invalid index!")
+	
+	local width, height = item:getBounds()
+	
+	if pref_luamenu_layoutmode.value >= 2 then
+		height = $ + hybridPadding()
+	end
+	
+	return height
 end
 
 function Menu:scrollBy(scrollby)

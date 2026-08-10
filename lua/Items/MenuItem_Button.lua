@@ -7,6 +7,9 @@ function MenuItem_Button:new(a)
 	
 	a.link = $ or nil
 	a.cvar = $ or nil
+	a.pref = $ or nil
+	
+	a.value_step = $ or 1
 	
 	a.action = $ or nil
 	
@@ -15,26 +18,24 @@ function MenuItem_Button:new(a)
 	return a
 end
 
+function MenuItem_Button:drawArrowsCheck(x, y)
+	if self.parent and self.parent.selection == self.index then
+		local flags = self.text_label:getFlags(self.text_label.colored)
+		local col = v.getStringColormap(flags)
+		self.text_label:drawArrows(x + self.parent.width, y, col)
+	end
+end
+
 function MenuItem_Button:draw(x, y)
-	local _, align_string, factor = self:getAlignment()
-	local width, height = self:getBounds()
-	local align_x = FixedMul(FixedMul(width, factor), self.scale)
-	width = self.parent.width
-	height = $ + min(FU * 2, self.spacing)
-	v.drawFixedFill(x + align_x - FU, y - FU, width + FU * 2, height + FU * 2, cv_menubgcolor.value) --top/bottom edges
-	
-	self.super.draw(self, x, y)
+	MenuItem_Text.draw(self, x, y)
 	
 	--only designed to be used with left alignment
-	if self.cvar then
-		self.text_label.label = self.cvar.string
+	local option = self.pref or self.cvar
+	
+	if option then
+		self.text_label.label = Prefs:getString(option)
 		
-		--TODO: function
-		if self.parent and self.parent.selection == self.index then
-			local flags = self.text_label:getFlags(self.text_label.colored)
-			local col = v.getStringColormap(flags)
-			self.text_label:drawArrows(x + self.parent.width, y, col)
-		end
+		self:drawArrowsCheck(x, y)
 	end
 	
 	self.text_label:draw(x + self.parent.width, y)
@@ -50,18 +51,10 @@ function MenuItem_Button:activate(increment)
 		Menu_GotoLink(self.link)
 	end
 	
-	if self.cvar then
-		--floats are special in various ways
-		if self.cvar.flags & CV_FLOAT then
-			local step = FU * 625 / 10000
-			local value = self.cvar.value + increment * step
-			
-			value = FixedDecimal(value, 4)
-			
-			Banpyura.CV_ForceSet(self.cvar, value)
-		else
-			Banpyura.CV_ForceAddValue(self.cvar, increment)
-		end
+	local option = self.pref or self.cvar
+	
+	if option then
+		Prefs:addValue(option, self.value_step * increment)
 	end
 	
 	if self.action then

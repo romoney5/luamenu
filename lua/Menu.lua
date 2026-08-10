@@ -24,14 +24,15 @@ cv_menucaps = CV_FindVar("menucaps") or {value = 1}
 cv_menucolor = CV_FindVar("menucolor") or {value = V_YELLOWMAP}
 cv_menubgcolor = CV_FindVar("menubgcolor") or {value = 159}
 
-if not loaded then
-	cv_luamenu_bgdecos = CV_RegisterVar{name = "luamenu_bgdecos", defaultvalue = "On", PossibleValue = CV_OnOff, flags = CV_SAVE}
-	cv_luamenu_anims = CV_RegisterVar{name = "luamenu_anims", defaultvalue = "On", PossibleValue = CV_OnOff, flags = CV_SAVE}
-	cv_luamenu_tooltips = CV_RegisterVar{name = "luamenu_tooltips", defaultvalue = "On", PossibleValue = CV_OnOff, flags = CV_SAVE}
-	cv_luamenu_showversion = CV_RegisterVar{name = "luamenu_showversion", defaultvalue = "On", PossibleValue = CV_OnOff, flags = CV_SAVE}
-	cv_luamenu_rounded = CV_RegisterVar{name = "luamenu_rounded", defaultvalue = "1", PossibleValue = {MIN = 0, MAX = FU * 4}, flags = CV_SAVE|CV_FLOAT}
-	cv_luamenu_sliders = CV_RegisterVar{name = "luamenu_sliders", defaultvalue = "On", PossibleValue = CV_OnOff, flags = CV_SAVE}
-end
+pref_luamenu_bgdecos = Prefs.Preference:new{id = "luamenu_bgdecos", value = 1, possible_value = Prefs.Defaults.OnOff}
+pref_luamenu_anims = Prefs.Preference:new{id = "luamenu_anims", value = 1, possible_value = Prefs.Defaults.OnOff}
+pref_luamenu_tooltips = Prefs.Preference:new{id = "luamenu_tooltips", value = 1, possible_value = Prefs.Defaults.OnOff}
+pref_luamenu_showversion = Prefs.Preference:new{id = "luamenu_showversion", value = 1, possible_value = Prefs.Defaults.OnOff}
+pref_luamenu_rounded = Prefs.Preference:new{id = "luamenu_rounded", value = FU, is_float = true, possible_value = {[0] = "MIN", [FU * 4] = "MAX"}}
+pref_luamenu_sliders = Prefs.Preference:new{id = "luamenu_sliders", value = 1, possible_value = Prefs.Defaults.OnOff}
+
+pref_luamenu_layoutmode = Prefs.Preference:new{id = "luamenu_layoutmode", value = 2, possible_value = {[1] = "Classic", [2] = "Hybrid", [3] = "Touch"}}
+pref_luamenu_debugoptionnames = Prefs.Preference:new{id = "luamenu_debugoptionnames", value = 0, possible_value = Prefs.Defaults.OnOff}
 
 bg_tint = {color = 31, level = 5}
 
@@ -48,6 +49,8 @@ local menu_time = 0
 keyHold = {}
 keyHold_lock = {}
 
+--utils
+
 local cache = {}
 
 --clear the cache once an addon is loaded
@@ -56,9 +59,9 @@ addHook("AddonLoaded", function()
 end)
 
 function cachePatch(patchname)
-	local cacheexists = cache[patchname]
+	local found = cache[patchname]
 	
-	if cacheexists == nil or (cacheexists and not cacheexists.valid) then
+	if found == nil or (found and not found.valid) then
 		if v.patchExists(patchname) then
 			cache[patchname] = v.cachePatch(patchname)
 		else
@@ -70,7 +73,8 @@ function cachePatch(patchname)
 end
 
 --xorshift prng i found off of temu
-local randomState = 0xBADE4404
+--TODO: die this for 2.2.16 (random library)
+local randomState = 0xBADE4404 + os.time()
 local function __internal_prng__()
 	randomState = $ ^^ ($ >> 13)
 	randomState = $ ^^ ($ >> 11)
@@ -90,7 +94,7 @@ function ScreenToDisplay(x, y)
 	y = FU * $
 
 	local dupx = v.dupx()
-	local dupy = v.dupy()
+	local dupy = dupx --v.dupx and v.dupy are functionally the same thing
 	local width = FU * v.width()
 	local height = FU * v.height()
 	local base_width = FU * 320
@@ -99,12 +103,9 @@ function ScreenToDisplay(x, y)
 	local scaled_height = base_height * dupy
 	
 	local left = width / 2 - scaled_width / 2
--- 	local bottom = height / 2 + scaled_height / 2
--- 	local right = width / 2 + scaled_width / 2
 	local top = height / 2 - scaled_height / 2
 	
 	return FixedDiv(x - left, FU * dupx), FixedDiv(y - top, FU * dupy)
--- 	return FixedMul(x - left, FixedDiv(base_width + left / 2, width)), FixedMul(y - top, FixedDiv(base_height + top / 2, height))
 end
 
 function FixedDecimal(str, max)
@@ -185,7 +186,7 @@ function Menu_GotoLink(link)
 		menu:on_entry(old_menu)
 	end
 	
-	if cv_luamenu_anims.value then
+	if pref_luamenu_anims.value then
 		menu.enter_anim = 0
 		menu.exit_anim = FU
 	end
@@ -196,7 +197,7 @@ loaded = true
 
 
 local function DrawSpikes(rot, patch, ox, oy, scroll, flags)
-	local col = v.getColormap(nil, nil, "Menu_Translation_"..cv_menubgcolor.value - 2)
+	local col = v.getColormap(nil, nil, "Menu_Translation_"..cv_menubgcolor.value)-- - 2)
 	local bg2 = cachePatch("MENU_SPIKE")
 	local bg = cachePatch(patch)
 	local dimension = bg2.height - 1
@@ -267,7 +268,7 @@ local function Input(key)
 				menus[current_menu]:on_entry(old_menu)
 			end
 			
-			if cv_luamenu_anims.value then
+			if pref_luamenu_anims.value then
 				menus[current_menu].enter_anim = FU
 				menus[current_menu].exit_anim = 0
 			end
@@ -398,7 +399,7 @@ local function Drawer(drawer, player)
 	
 	menu:updateScroll()
 	
-	if cv_luamenu_bgdecos.value then
+	if pref_luamenu_bgdecos.value then
 		local speed = FU / TICRATE / 2
 		DrawSpikes(ANG1 * 10, "MENU_SPIKE_2", 0, FU * 155, (FixedMul(menu_time, speed) + menu.scroll / 64) % FU, V_SNAPTOBOTTOM|V_SNAPTOLEFT)
 		DrawSpikes(ANG1 * 10 + ANGLE_180, "MENU_SPIKE_3", FU * 270, FU * 40, (FixedMul(menu_time, speed) + menu.scroll / 64) % FU, V_SNAPTOTOP|V_SNAPTORIGHT)

@@ -49,8 +49,7 @@ function MenuItem_Text:getBounds()
 	return width, height
 end
 
-function MenuItem_Text:recalcLayout()
-	local label = self.label
+function MenuItem_Text:recalcLayout(label)
 	local uppercase = cv_menucaps.value and not self.force_lowercase
 	local layout = {}
 	self.text_layout = layout
@@ -144,18 +143,22 @@ function MenuItem_Text:draw(x, y)
 	end
 	
 	local uppercase = cv_menucaps.value and not self.force_lowercase
-	
-	if self._old_label ~= self.label or self._old_uppercase ~= uppercase
-	or self._old_parent_width ~= self.parent_width--[[ or self._old_scale ~= self.scale]] then
-		self._old_label = self.label
-		self._old_uppercase = uppercase
-		self._old_parent_width = self.parent_width
-		self._old_scale = self.scale
-		self:recalcLayout()
-	end
-
 	local label = self.label
 	local scale = self.scale
+	
+	if pref_luamenu_debugoptionnames.value and (self.cvar or self.pref) then
+		label = (self.cvar and self.cvar.name) or (self.pref and self.pref.id)
+	end
+	
+	if self._old_label ~= label or self._old_uppercase ~= uppercase
+	or self._old_parent_width ~= self.parent_width--[[ or self._old_scale ~= self.scale]] then
+		self._old_label = label
+		self._old_uppercase = uppercase
+		self._old_parent_width = self.parent_width
+		self._old_scale = scale
+		self:recalcLayout(label)
+	end
+
 	local width = 0
 	local max_width = 0 --used to get text bounds
 	local flags = self:getFlags(self.colored)

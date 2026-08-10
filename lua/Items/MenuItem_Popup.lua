@@ -25,7 +25,7 @@ function MenuItem_Popup:new(a)
 end
 
 function MenuItem_Popup:draw(x, y)
-	if cv_luamenu_anims.value then
+	if pref_luamenu_anims.value then
 		self.open_anim = min($ + v.renderdeltatics() / TICRATE * 4, FU)
 	else
 		self.open_anim = FU

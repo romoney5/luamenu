@@ -216,7 +216,7 @@ menus.MultiplayerMenu = Menu:new{
 		MenuItem_Button:new{label = "Server browser...", link = "ServerBowser", spacing = FU * 2},
 		MenuItem_Textbox:new{label = "Specify server address:", action = function(self)
 			serv_connect(self.value)
-		end, spacing = FU * 2}, --action
+		end, spacing = FU * 2},
 		MenuItem_Button:new{label = "Rejoin previous servers...", link = "MultiplayerMenu_Rejoin", spacing = FU * 2}, --srb2-edit
 		
 		MenuItem_Header:new{label = "Host a game"},
@@ -254,6 +254,52 @@ menus.MultiplayerMenu_Rejoin = Menu:new{
 		},
 		
 		MenuItem_Button:new{label = "Server browser...", link = "ServerBowser", spacing = FU * 2},
+	},
+}
+
+--this is done differently because the vanilla player setup Is A Hack
+menus.MultiplayerMenu_P1Setup = Menu:new{
+	anchor = {x = "center", y = "top"},
+	width = FU * 320 - FU * 30 * 2,
+	height = FU * 200 - FU * 20 * 2,
+	title = "PLAYER SETUP",
+	
+-- 	on_entry = ClearMultiplayer,
+	
+	items = {
+-- 		MenuItem_Header:new{label = "Name"},
+		MenuItem_Textbox:new{label = "Name", cvar = CV_FindVar("name"), spacing = FU * 2 + FU * 10},
+		
+		MenuItem_Button:new{label = "Character", cvar = CV_FindVar("skin"),
+		get_skin_num = function(name)
+			for skin in skins.iterate do
+				if skin.name:lower() == name:lower() then
+					return #skin
+				end
+			end
+		end,
+		activate = function(self, increment)
+			local og_skin = self.cvar.string
+			local new_skin
+			
+			if not skins[og_skin] then
+				new_skin = skins[0].name
+			else
+				while new_skin == nil do--or (og_skin == new_skin--[[ and R_SkinUsable(-1, new_skin)]]) do
+					--r_skinusable isn't used here because Of Course They Have To Complicate Things!!
+					if new_skin == nil then
+						new_skin = og_skin
+					end
+					
+					local num = (self.get_skin_num(new_skin) + increment) % #skins
+					if num < 0 then num = #skins - 1 end
+					
+					new_skin = skins[num].name
+				end
+			end
+			
+			Banpyura.CV_ForceSet(self.cvar, new_skin)
+		end, spacing = FU * 2},
 	},
 }
 
@@ -306,13 +352,13 @@ menus.OptionsMenu_Banpyura = Menu:new{
 -- 		MenuItem_Button:new{label = "Pitch/Roll Object Rotation", desc = "Rotate objects on slopes", cvar = CV_FindVar("pitchroll-tation"), spacing = FU * 2}, --srb2-edit, romoney5
 -- 		MenuItem_Button:new{label = "Ring Racers Screenshakes", desc = "Ring Racers-styled screen shakes", cvar = CV_FindVar("rr_quakes"), spacing = FU * 2}, --srb2-edit, romoney5
 		MenuItem_Button:new{label = "Screenshake Effects", desc = "Enable screen shakes", cvar = CV_FindVar("earthquake"), spacing = FU * 2}, --srb2-edit, romoney5
-		MenuItem_Slider:new{label = "Minimum Brightness", slider_step = 5, desc = "Change minimum sector brightness", cvar = CV_FindVar("r_secbright"), spacing = FU * 2},
+		MenuItem_Slider:new{label = "Minimum Brightness", value_step = 5, desc = "Change minimum sector brightness", cvar = CV_FindVar("r_secbright"), spacing = FU * 2},
 		
 		MenuItem_Header:new{label = "Chat"},
 		MenuItem_Button:new{label = "Horizontal Snap", desc = "Horizontal anchor for the chatbox", cvar = CV_FindVar("chatsnapx"), spacing = FU * 2},
 		MenuItem_Button:new{label = "Vertical Snap", desc = "Vertical anchor for the chatbox", cvar = CV_FindVar("chatsnapy"), spacing = FU * 2},
-		MenuItem_Slider:new{label = "Horizontal Position", desc = "X position for the chatbox", slider_step = 2, cvar = CV_FindVar("chatx"), spacing = FU * 2},
-		MenuItem_Slider:new{label = "Vertical Position", desc = "Y position for the chatbox", slider_step = 2, cvar = CV_FindVar("chaty"), spacing = FU * 2},
+		MenuItem_Slider:new{label = "Horizontal Position", desc = "X position for the chatbox", value_step = 2, cvar = CV_FindVar("chatx"), spacing = FU * 2},
+		MenuItem_Slider:new{label = "Vertical Position", desc = "Y position for the chatbox", value_step = 2, cvar = CV_FindVar("chaty"), spacing = FU * 2},
 		MenuItem_Button:new{label = "Show Char. Limit", cvar = CV_FindVar("chat_showlimit"), spacing = FU * 2},
 		MenuItem_Button:new{label = "Clear Text on Exit", cvar = CV_FindVar("chat_clearonexit"), spacing = FU * 2},
 		MenuItem_Button:new{label = "Chat Cursor", desc = "Change the style of the chat cursor", cvar = CV_FindVar("chatcursor"), spacing = FU * 2},
@@ -336,7 +382,7 @@ menus.OptionsMenu_Banpyura = Menu:new{
 		MenuItem_Header:new{label = "General"},
 		MenuItem_Slider:new{label = "Minimum Delay", desc = "Minimum input delay", cvar = CV_FindVar("mindelay"), spacing = FU * 2},
 		MenuItem_Button:new{label = "Gentleman's Delay", desc = "As a host, use the lowest player input delay", cvar = CV_FindVar("gentlemensdelay"), spacing = FU * 2},
-		MenuItem_Slider:new{label = "Connection Timeout", desc = "Tics of lost connection before disconnecting", slider_step = TICRATE, slider_min = 5, slider_max = TICRATE * 20, cvar = CV_FindVar("nettimeout"), spacing = FU * 2},
+		MenuItem_Slider:new{label = "Connection Timeout", desc = "Tics of lost connection before disconnecting", value_step = TICRATE, slider_min = 5, slider_max = TICRATE * 20, cvar = CV_FindVar("nettimeout"), spacing = FU * 2},
 		MenuItem_Slider:new{label = "Network Buffer", desc = "Tic buffer; higher amounts increase latency but smoothen gameplay", cvar = CV_FindVar("netticbuffer"), spacing = FU * 2},
 		
 		MenuItem_Header:new{label = "Server Browser"},
@@ -361,10 +407,10 @@ menus.OptionsMenu_Luamenu = Menu:new{
 	
 	items = {
 		MenuItem_Header:new{label = "Visual"},
-		MenuItem_Button:new{label = "Background Decorations", desc = "Show visual decorations in the background", cvar = CV_FindVar("luamenu_bgdecos"), spacing = FU * 2},
-		MenuItem_Button:new{label = "Animations", desc = "Enable animations when entering pages, scrolling, etc.", cvar = CV_FindVar("luamenu_anims"), spacing = FU * 2},
-		MenuItem_Button:new{label = "Tooltips", desc = "Show short descriptions of menu options at the bottom", cvar = CV_FindVar("luamenu_tooltips"), spacing = FU * 2},
-		MenuItem_Button:new{label = "Show Version String", desc = "Show the game version in certain menus", cvar = CV_FindVar("luamenu_showversion"), spacing = FU * 2},
+		MenuItem_Button:new{label = "Background Decorations", desc = "Show visual decorations in the background", pref = pref_luamenu_bgdecos, spacing = FU * 2},
+		MenuItem_Button:new{label = "Animations", desc = "Enable animations when entering pages, scrolling, etc.", pref = pref_luamenu_anims, spacing = FU * 2},
+		MenuItem_Button:new{label = "Tooltips", desc = "Show short descriptions of menu options at the bottom", pref = pref_luamenu_tooltips, spacing = FU * 2},
+		MenuItem_Button:new{label = "Show Version String", desc = "Show the game version in certain menus", pref = pref_luamenu_showversion, spacing = FU * 2},
 		
 		MenuItem_Header:new{label = "Personalization"},
 		
@@ -384,8 +430,11 @@ menus.OptionsMenu_Luamenu = Menu:new{
 		MenuItem_Button:new{label = "Uppercase Menus", desc = "Force uppercase text in menus", cvar = CV_FindVar("menucaps"), spacing = FU * 2}, --srb2-edit
 		MenuItem_Button:new{label = "Highlight Color", desc = "Change the color of highlighted text", cvar = CV_FindVar("menucolor"), spacing = FU * 2}, --srb2-edit, romoney5
 		MenuItem_Button:new{label = "Background Color", desc = "Change the color of backgrounds", cvar = CV_FindVar("menubgcolor"), spacing = FU * 2}, --gks edit
-		MenuItem_Button:new{label = "Stylized Sliders", desc = "Enable Luamenu-styled sliders", cvar = CV_FindVar("luamenu_sliders"), spacing = FU * 2},
-		MenuItem_Slider:new{label = "Rounded Corners", desc = "Change the size of rounded corners on boxes", slider_step = FU / 4, cvar = CV_FindVar("luamenu_rounded"), spacing = FU * 2},
+		MenuItem_Button:new{label = "Stylized Sliders", desc = "Enable Luamenu-styled sliders", pref = pref_luamenu_sliders, spacing = FU * 2},
+		MenuItem_Slider:new{label = "Rounded Corners", desc = "Change the size of rounded corners on boxes", value_step = FU / 4, pref = pref_luamenu_rounded, spacing = FU * 2},
+		
+		MenuItem_Header:new{label = "Layout"},
+		MenuItem_Button:new{label = "Layout Mode", desc = "Choose the interface mode\n* Desktop", pref = pref_luamenu_layoutmode, spacing = FU * 2},
 		
 		MenuItem_Header:new{label = "Miscellaneous"},
 		MenuItem_Button:new{label = "Disable Luamenu...", action = function(self)
@@ -413,7 +462,7 @@ menus.OptionsMenu_Luamenu_DevTools = Menu:new{
 	show_version = true,
 	
 	items = {
-		--MenuItem_Header:new{label = "Functionality"},
+		MenuItem_Header:new{label = "Functionality"},
 		MenuItem_Button:new{label = "Verify Menu Links", desc = "",
 		verify_menu = function(self, menu, bad, stack)
 			for i, v in ipairs(menus[menu].items) do
@@ -452,6 +501,9 @@ menus.OptionsMenu_Luamenu_DevTools = Menu:new{
 				MenuItem_Button:new{label = "Xdf", desc = "Xdf", cvar = CV_FindVar("xdf") or CV_RegisterVar{name = "xdf", defaultvalue = "Xdf"}, spacing = FU * 2},
 			},
 		}), spacing = FU * 2},
+		
+		MenuItem_Header:new{label = "Display"},
+		MenuItem_Button:new{label = "Show Internal Option Names", desc = "Show internal names for cvars and prefs", pref = pref_luamenu_debugoptionnames, spacing = FU * 2},
 	},
 }
 
@@ -557,8 +609,8 @@ menus.OptionsMenu_P1Controls = Menu:new{
 				MenuItem_Button:new{label = "Third-Person MouseLook", desc = "Enable looking up/down in third person", cvar = CV_FindVar("chasemlook"), spacing = FU * 2},
 				MenuItem_Button:new{label = "Mouse Move", desc = "Use the mouse to move the character", cvar = CV_FindVar("mousemove"), spacing = FU * 2},
 				MenuItem_Button:new{label = "Invert Y Axis", desc = "Invert vertical mouse movement", cvar = CV_FindVar("invertmouse"), spacing = FU * 2},
-				MenuItem_Slider:new{label = "Mouse X Sensitivity", slider_step = 2, desc = "Change horizontal mouse sensitivity", cvar = CV_FindVar("mousesens"), spacing = FU * 2},
-				MenuItem_Slider:new{label = "Mouse Y Sensitivity", slider_step = 2, desc = "Change vertical mouse sensitivity", cvar = CV_FindVar("mouseysens"), spacing = FU * 2 + FU * 10},
+				MenuItem_Slider:new{label = "Mouse X Sensitivity", value_step = 2, desc = "Change horizontal mouse sensitivity", cvar = CV_FindVar("mousesens"), spacing = FU * 2},
+				MenuItem_Slider:new{label = "Mouse Y Sensitivity", value_step = 2, desc = "Change vertical mouse sensitivity", cvar = CV_FindVar("mouseysens"), spacing = FU * 2 + FU * 10},
 			},
 		}), spacing = FU * 2},
 		MenuItem_Button:new{label = "Gamepad Options...", desc = "Change controller settings", link = new_menu("OptionsMenu_P1Controls_Gamepad", Menu:new{
@@ -584,8 +636,8 @@ menus.OptionsMenu_P1Controls = Menu:new{
 				
 				MenuItem_Button:new{label = "First-Person Vert-Look", desc = "Enable vertical camera movement in first-person", cvar = CV_FindVar("alwaysmlook"), spacing = FU * 2},
 				MenuItem_Button:new{label = "Third-Person Vert-Look", desc = "Enable vertical camera movement in third-person", cvar = CV_FindVar("chasemlook"), spacing = FU * 2},
-				MenuItem_Slider:new{label = "Analog Deadzone", desc = "Deadzone for analog (e.g. joystick) buttons", slider_step = FU * 5 / 100, cvar = CV_FindVar("joy_deadzone"), spacing = FU * 2},
-				MenuItem_Slider:new{label = "Digital Deadzone", desc = "Deadzone for digital (e.g. face button) buttons", slider_step = FU * 5 / 100, cvar = CV_FindVar("joy_digdeadzone"), spacing = FU * 2},
+				MenuItem_Slider:new{label = "Analog Deadzone", desc = "Deadzone for analog (e.g. joystick) buttons", value_step = FU * 5 / 100, cvar = CV_FindVar("joy_deadzone"), spacing = FU * 2},
+				MenuItem_Slider:new{label = "Digital Deadzone", desc = "Deadzone for digital (e.g. face button) buttons", value_step = FU * 5 / 100, cvar = CV_FindVar("joy_digdeadzone"), spacing = FU * 2},
 			},
 		}), spacing = FU * 2 + FU * 10},
 		
@@ -653,7 +705,7 @@ menus.OptionsMenu_Video = Menu:new{
 		
 		MenuItem_Header:new{label = "Chat"},
 		MenuItem_Button:new{label = "Chat Mode", cvar = CV_FindVar("chatmode"), spacing = FU * 2},
-		MenuItem_Slider:new{label = "Chat Box Width", slider_step = 5, cvar = CV_FindVar("chatwidth"), spacing = FU * 2},
+		MenuItem_Slider:new{label = "Chat Box Width", value_step = 5, cvar = CV_FindVar("chatwidth"), spacing = FU * 2},
 		MenuItem_Slider:new{label = "Chat Box Height", cvar = CV_FindVar("chatheight"), spacing = FU * 2},
 		MenuItem_Button:new{label = "Message Fadeout Time", cvar = CV_FindVar("chattime"), spacing = FU * 2},
 		MenuItem_Button:new{label = "Chat Notifications", desc = "Enable chat sounds", cvar = CV_FindVar("chatnotifications"), spacing = FU * 2},

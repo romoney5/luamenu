@@ -26,6 +26,13 @@ end
 function MenuItem_Textbox:draw(x, y)
 	self.super.draw(self, x, y)
 	
+	--make the box stand out against hybrid mode's boxes
+-- 	if pref_luamenu_layoutmode.value >= 2 then
+-- 		self.box.color_offset = -2
+-- 	else
+-- 		self.box.color_offset = 0
+-- 	end
+	
 	--only designed to be used with left alignment
 -- 	local align, align_string, factor = self.box:getAlignment()
 	self.box:draw(x + self.box.width / 2, y + FU * 8 + FU * 2)
