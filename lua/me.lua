@@ -1,9 +1,4 @@
---Niebelheim.
---*laughter*
---What about you?
-
 --Me?
-print("Gongaga.")
 
 if not takis_luamenu then return end
 

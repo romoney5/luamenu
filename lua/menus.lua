@@ -112,6 +112,7 @@ menus.ServerBowser = Menu:new{
 	height = FU * 200 - FU * 20 * 2,
 	
 	on_entry = function(self, old_menu)
+		--TODO: menuitem free position option..?
 		print("Contacting master server...")
 		
 		self.items = {

@@ -9,7 +9,7 @@ setmetatable(MenuClass, MenuClass)
 --then you can use that metatable address as much as you want in multiplayer
 --(i hope)
 
--- MenuClass.__index = function(self, k) return rawget(self, k) or self.super[k] end --I was
+-- MenuClass.__index = function(self, k) return rawget(self, k) or self.super[k] end
 
 function MenuClass:new(a)
     local a = a or {}
