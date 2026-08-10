@@ -221,6 +221,32 @@ menus.MultiplayerMenu = Menu:new{
 	},
 }
 
+menus.MultiplayerMenu_Rejoin = Menu:new{
+	anchor = {x = "center", y = "top"},
+	width = FU * 320 - FU * 30 * 2,
+	height = FU * 200 - FU * 20 * 2,
+	title = "MULTIPLAYER",
+	
+-- 	on_entry = ClearMultiplayer,
+	
+	items = {
+		MenuItem_Header:new{label = "Rejoin a server"},
+		
+		MenuItem_Box:new{width = FU * 280, height = FU * 34, spacing = FU * 4,
+			align = "center",
+			level_title_label = MenuItem_Text:new{scale = FU, force_lowercase = true,
+				label = "Previously joined servers will show up here."},
+			on_draw = function(box, x, y, width, height)
+				local padding = FU * 8
+				
+				box.level_title_label.parent_width = width - padding * 2
+				box.level_title_label:draw(x + padding, y + padding - FU)
+			end},
+		
+		MenuItem_Button:new{label = "Server browser...", link = "ServerBowser", spacing = FU * 2},
+	},
+}
+
 
 menus.OptionsMenu = Menu:new{
 	anchor = {x = "center", y = "top"},
@@ -261,6 +287,21 @@ menus.OptionsMenu_Luamenu = Menu:new{
 		MenuItem_Button:new{label = "Highlight Color", desc = "Change the color of highlighted text", cvar = CV_FindVar("menucolor"), spacing = FU * 2}, --srb2-edit, romoney5
 		MenuItem_Button:new{label = "Background Color", desc = "Change the color of backgrounds", cvar = CV_FindVar("menubgcolor"), spacing = FU * 2}, --gks edit
 		MenuItem_Slider:new{label = "Rounded Corners", desc = "Enable rounded corners on boxes", slider_step = FU / 4, cvar = CV_FindVar("luamenu_rounded"), spacing = FU * 2},
+		
+		MenuItem_Header:new{label = "Miscellaneous"},
+		MenuItem_Button:new{label = "Disable Luamenu...", action = function(self)
+			ShowPopup("Disable Luamenu", "Turn off Luamenu?\nYou can turn it on again by running \"luamenu on\".", {
+				{body = "Back", keys = {"n", "escape"}, action = function(self)
+					return true
+				end},
+				{body = "Disable", keys = {"y", "enter"}, width = FU * 65, action = function(self)
+					gks_luamenu = false
+					CV_StealthSet(CV_FindVar("luamenu"), 0)
+					
+					return true
+				end},
+			})
+		end, spacing = FU * 2},
 	},
 }
 
@@ -415,6 +456,15 @@ menus.OptionsMenu_Video_OpenGL = Menu:new{
 	height = FU * 200 - FU * 20 * 2,
 	title = "OPENGL OPTIONS", --"VIDEO OPTIONS",
 	
+	cv_renderer = CV_FindVar("renderer"),
+	
+	on_entry = function(self, old_menu)
+		if self.cv_renderer.value == 2 then return end
+		
+		ShowPopup("OpenGL Options", "You are not currently using the OpenGL renderer.\n"
+			.."Switch to the OpenGL renderer for these options to take effect.")
+	end,
+	
 	items = {
 		MenuItem_Header:new{label = "3D Models"},
 		MenuItem_Button:new{label = "Models", cvar = CV_FindVar("gr_models"), spacing = FU * 2},
@@ -460,7 +510,27 @@ menus.OptionsMenu_Sound = Menu:new{
 		MenuItem_Button:new{label = "Reset Music Upon Dying", cvar = CV_FindVar("resetmusic"), spacing = FU * 2},
 		MenuItem_Button:new{label = "Default 1-Up sound", cvar = CV_FindVar("1upsound"), spacing = FU * 2 + FU * 10},
 		
-		MenuItem_Button:new{label = "Advanced Settings...", link = "OptionsMenu_Sound_Advanced", spacing = FU * 2},
+		MenuItem_Button:new{label = "Advanced Settings...", link = new_menu("OptionsMenu_Sound_Advanced", Menu:new{
+			anchor = {x = "center", y = "top"}, width = FU * 320 - FU * 30 * 2, height = FU * 200 - FU * 20 * 2,
+			title = "SOUND OPTIONS",
+			
+			items = {
+				--ifdef HAVE_OPENMPT
+				MenuItem_Header:new{label = "OpenMPT Settings"},
+				MenuItem_Button:new{label = "Instrument Filter", desc = "Only available if compiled with OpenMPT", cvar = CV_FindVar("modfilter"), spacing = FU * 2},
+				
+				--ifdef HAVE_MIXERX
+				MenuItem_Header:new{label = "MIDI Settings"},
+				MenuItem_Button:new{label = "MIDI Player", desc = "Only available if compiled with SDL-Mixer-X", cvar = CV_FindVar("midiplayer"), spacing = FU * 2},
+				MenuItem_Textbox:new{label = "FluidSynth Sound Font File", desc = "Only available if compiled with SDL-Mixer-X", cvar = CV_FindVar("midisoundfont"), spacing = FU * 2},
+				MenuItem_Textbox:new{label = "TiMidity++ Config Folder", desc = "Only available if compiled with SDL-Mixer-X", cvar = CV_FindVar("midisoundbank"), spacing = FU * 2},
+				
+				MenuItem_Header:new{label = "Miscellaneous"},
+				MenuItem_Button:new{label = "Play Sound Effects if Unfocused", cvar = CV_FindVar("playsoundsifunfocused"), spacing = FU * 2},
+				MenuItem_Button:new{label = "Play Music if Unfocused", cvar = CV_FindVar("playmusicifunfocused"), spacing = FU * 2},
+				MenuItem_Button:new{label = "Let Levels Force Reset Music", desc = "Allow some levels to reset music on restart", cvar = CV_FindVar("resetmusicbyheader"), spacing = FU * 2},
+			},
+		}), spacing = FU * 2},
 	},
 }
 
@@ -472,50 +542,57 @@ menus.OptionsMenu_Server = Menu:new{
 	
 	items = {
 		MenuItem_Header:new{label = "General"},
-		MenuItem_Textbox:new{label = "Server name", desc = "", cvar = CV_FindVar("servername"), spacing = FU * 2},
-		MenuItem_Button:new{label = "Max Players", desc = "", cvar = CV_FindVar("maxplayers"), spacing = FU * 2},
-		MenuItem_Button:new{label = "Allow Add-on Downloading", desc = "", cvar = CV_FindVar("downloading"), spacing = FU * 2},
-		MenuItem_Button:new{label = "Allow players to join", desc = "", cvar = CV_FindVar("allowjoin"), spacing = FU * 2},
-		MenuItem_Button:new{label = "Minutes for reconnecting", desc = "", cvar = CV_FindVar("rejointimeout"), spacing = FU * 2},
-		MenuItem_Button:new{label = "Map progression", desc = "", cvar = CV_FindVar("advancemap"), spacing = FU * 2},
-		MenuItem_Button:new{label = "Intermission Timer", desc = "", cvar = CV_FindVar("inttime"), spacing = FU * 2},
+		MenuItem_Textbox:new{label = "Server name", desc = "Server name as seen in the Master Server", cvar = CV_FindVar("servername"), spacing = FU * 2},
+		MenuItem_Button:new{label = "Max Players", desc = "Maximum amount of players in the server", cvar = CV_FindVar("maxplayers"), spacing = FU * 2},
+		MenuItem_Button:new{label = "Allow Add-on Downloading", cvar = CV_FindVar("downloading"), spacing = FU * 2},
+		MenuItem_Button:new{label = "Allow players to join", cvar = CV_FindVar("allowjoin"), spacing = FU * 2},
+		MenuItem_Button:new{label = "Minutes for reconnecting", desc = "Minutes that a player is given to reconnect", cvar = CV_FindVar("rejointimeout"), spacing = FU * 2},
+		MenuItem_Button:new{label = "Map progression", desc = "How levels should progress", cvar = CV_FindVar("advancemap"), spacing = FU * 2},
+		MenuItem_Button:new{label = "Intermission Timer", desc = "Time spent in level end/intermission", cvar = CV_FindVar("inttime"), spacing = FU * 2},
 		
 		MenuItem_Header:new{label = "Characters"},
-		MenuItem_Button:new{label = "Force a character", desc = "", cvar = CV_FindVar("forceskin"), spacing = FU * 2},
-		MenuItem_Button:new{label = "Restrict character changes", desc = "", cvar = CV_FindVar("restrictskinchange"), spacing = FU * 2},
+		MenuItem_Button:new{label = "Force a character", cvar = CV_FindVar("forceskin"), spacing = FU * 2},
+		MenuItem_Button:new{label = "Restrict character changes", desc = "Toggle skin change restrictions in competitive gametypes", cvar = CV_FindVar("restrictskinchange"), spacing = FU * 2},
 		
 		MenuItem_Header:new{label = "Items"},
-		MenuItem_Button:new{label = "Item respawn delay", desc = "", cvar = CV_FindVar("respawnitemtime"), spacing = FU * 2},
-		MenuItem_Button:new{label = "Mystery Item Monitor Toggles...", desc = "", link = "OptionsMenu_Server_Monitors", spacing = FU * 2},
+		MenuItem_Button:new{label = "Item respawn delay", desc = "Seconds until items (e.g. monitors) respawn", cvar = CV_FindVar("respawnitemtime"), spacing = FU * 2},
+		MenuItem_Button:new{label = "Mystery Item Monitor Toggles...", desc = "Item monitor chances for competitive gametypes", link = "OptionsMenu_Server_Monitors", spacing = FU * 2}, --TODO
 		
 		MenuItem_Header:new{label = "Cooperative"},
-		MenuItem_Button:new{label = "Players required for exit", desc = "", cvar = CV_FindVar("playersforexit"), spacing = FU * 2},
-		MenuItem_Button:new{label = "Starposts", desc = "", cvar = CV_FindVar("coopstarposts"), spacing = FU * 2},
-		MenuItem_Button:new{label = "Life sharing", desc = "", cvar = CV_FindVar("cooplives"), spacing = FU * 2},
-		MenuItem_Button:new{label = "Post-goal free roaming", desc = "", cvar = CV_FindVar("exitmove"), spacing = FU * 2},
+		MenuItem_Button:new{label = "Players required for exit", desc = "Fraction of finished players to advance the level", cvar = CV_FindVar("playersforexit"), spacing = FU * 2},
+		MenuItem_Button:new{label = "Starposts", desc = "Starpost collection type", cvar = CV_FindVar("coopstarposts"), spacing = FU * 2},
+		MenuItem_Button:new{label = "Life sharing", desc = "Life sharing type", cvar = CV_FindVar("cooplives"), spacing = FU * 2},
+		MenuItem_Button:new{label = "Post-goal free roaming", desc = "Allow players to move after reaching the goal", cvar = CV_FindVar("exitmove"), spacing = FU * 2},
 		
 		MenuItem_Header:new{label = "Race, Competition"},
-		MenuItem_Button:new{label = "Level completion countdown", desc = "", cvar = CV_FindVar("countdowntime"), spacing = FU * 2},
-		MenuItem_Button:new{label = "Item Monitors", desc = "", cvar = CV_FindVar("competitionboxes"), spacing = FU * 2},
+		MenuItem_Button:new{label = "Level completion countdown", cvar = CV_FindVar("countdowntime"), spacing = FU * 2},
+		MenuItem_Button:new{label = "Item Monitors", cvar = CV_FindVar("competitionboxes"), spacing = FU * 2},
 		
 		MenuItem_Header:new{label = "Ringslinger (Match, CTF, Tag, H&S)"},
-		MenuItem_Button:new{label = "Time Limit", desc = "", cvar = CV_FindVar("timelimit"), spacing = FU * 2},
-		MenuItem_Button:new{label = "Score Limit", desc = "", cvar = CV_FindVar("pointlimit"), spacing = FU * 2},
-		MenuItem_Button:new{label = "Overtime on Tie", desc = "", cvar = CV_FindVar("overtime"), spacing = FU * 2},
-		MenuItem_Button:new{label = "Player respawn delay", desc = "", cvar = CV_FindVar("respawndelay"), spacing = FU * 2},
+		MenuItem_Button:new{label = "Time Limit", cvar = CV_FindVar("timelimit"), spacing = FU * 2},
+		MenuItem_Button:new{label = "Score Limit", cvar = CV_FindVar("pointlimit"), spacing = FU * 2},
+		MenuItem_Button:new{label = "Overtime on Tie", desc = "Go into overtime if players are tied", cvar = CV_FindVar("overtime"), spacing = FU * 2},
+		MenuItem_Button:new{label = "Player respawn delay", cvar = CV_FindVar("respawndelay"), spacing = FU * 2},
+		
+		MenuItem_Button:new{label = "Item Monitors", cvar = CV_FindVar("matchboxes"), spacing = FU * 2},
+		MenuItem_Button:new{label = "Weapon Rings", cvar = CV_FindVar("specialrings"), spacing = FU * 2},
+		MenuItem_Button:new{label = "Power Stones", cvar = CV_FindVar("powerstones"), spacing = FU * 2},
+		
+		MenuItem_Button:new{label = "Flag respawn delay", cvar = CV_FindVar("flagtime"), spacing = FU * 2},
+		MenuItem_Button:new{label = "Hiding time", cvar = CV_FindVar("hidetime"), spacing = FU * 2},
 		
 		MenuItem_Header:new{label = "Teams"},
-		MenuItem_Button:new{label = "Autobalance sizes", desc = "", cvar = CV_FindVar("autobalance"), spacing = FU * 2},
-		MenuItem_Button:new{label = "Scramble on Map Change", desc = "", cvar = CV_FindVar("scrambleonchange"), spacing = FU * 2},
+		MenuItem_Button:new{label = "Autobalance sizes", cvar = CV_FindVar("autobalance"), spacing = FU * 2},
+		MenuItem_Button:new{label = "Scramble on Map Change", cvar = CV_FindVar("scrambleonchange"), spacing = FU * 2},
 		
 		MenuItem_Header:new{label = "Advanced"},
-		MenuItem_Textbox:new{label = "Master server", desc = "", cvar = CV_FindVar("masterserver"), spacing = FU * 2},
-		MenuItem_Button:new{label = "Join delay", desc = "", cvar = CV_FindVar("joindelay"), spacing = FU * 2},
-		MenuItem_Button:new{label = "Attempts to resynchronise", desc = "", cvar = CV_FindVar("resynchattempts"), spacing = FU * 2},
-		MenuItem_Button:new{label = "Show IP Address of Joiners", desc = "", cvar = CV_FindVar("showjoinaddress"), spacing = FU * 2},
+		MenuItem_Textbox:new{label = "Master server", desc = "Address of Master Server", cvar = CV_FindVar("masterserver"), spacing = FU * 2},
+		MenuItem_Button:new{label = "Join delay", desc = "Delay when too many players join at once", cvar = CV_FindVar("joindelay"), spacing = FU * 2},
+		MenuItem_Button:new{label = "Attempts to resynchronise", desc = "Toggle resynchs (values above 1 make no difference)", cvar = CV_FindVar("resynchattempts"), spacing = FU * 2},
+		MenuItem_Button:new{label = "Show IP Address of Joiners", desc = "Print IP address of joining players", cvar = CV_FindVar("showjoinaddress"), spacing = FU * 2},
 		--romoney5
-		MenuItem_Button:new{label = "Download Speed", desc = "", cvar = CV_FindVar("downloadspeed"), spacing = FU * 2},
-		MenuItem_Button:new{label = "Maximum File Size", desc = "", cvar = CV_FindVar("maxsend"), spacing = FU * 2},
+		MenuItem_Button:new{label = "Download Speed", desc = "File downloading speed", cvar = CV_FindVar("downloadspeed"), spacing = FU * 2},
+		MenuItem_Button:new{label = "Maximum File Size", desc = "Max. size of a file the server will send", cvar = CV_FindVar("maxsend"), spacing = FU * 2},
 		
 -- 		MenuItem_Button:new{label = "Advanced", desc = "", link = "OptionsMenu_Server_Advanced", spacing = FU * 2}, --romoney5
 	},

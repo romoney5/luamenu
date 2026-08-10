@@ -635,6 +635,24 @@ function MenuItem_Button:new(a)
 	return a
 end
 
+function MenuItem_Text:drawArrows(x, y, col)
+	local width, height = self:getBounds()
+	local patch_left = cachePatch(self.font.."028")
+	local patch_right = cachePatch(self.font.."029")
+	
+	--animation
+	local out = FU * 2
+	self.arrow_blink = (($ or 0) + v.deltaTics() / TICRATE * 4) % FU
+	
+	if self.arrow_blink >= FU / 2 then
+		out = $ + FU
+	end
+	
+	--right arrow
+	v.drawScaled(x - width - FU * patch_left.width - out, y, FU, patch_left, 0, col)
+	v.drawScaled(x + out, y, FU, patch_right, 0, col)
+end
+
 function MenuItem_Button:draw(x, y)
 	self.super.draw(self, x, y)
 	
@@ -642,6 +660,13 @@ function MenuItem_Button:draw(x, y)
 	if self.cvar then
 		self.text_label.label = self.cvar.string
 		self.text_label:draw(x + self.parent.width, y)
+		
+		--TODO: function
+		if self.parent and self.parent.selection == self.index then
+			local flags = self.text_label:getFlags(self.text_label.colored)
+			local col = v.getStringColormap(flags)
+			self.text_label:drawArrows(x + self.parent.width, y, col)
+		end
 	end
 end
 
@@ -685,30 +710,20 @@ function MenuItem_Slider:new(a)
 	return a
 end
 
+function MenuItem_Slider:getBounds()
+	return self.width + FU * 4, FU * 8
+end
+
 local function get_percent(a, x, y)
 	return FixedDiv(a - x, (y - x) or 1)
 end
 
-local function L_FixedDecimal(str, maxdecimal)
-	if str == nil or tostring(str) == nil then
-		return '1'
+local function L_FixedDecimal(str, max)
+	if max == nil then
+		max = 2
 	end
-	local number = tonumber(str)
-	maxdecimal = ($ ~= nil) and $ or 2
-	if tonumber(str) == 0 then return '0' end
-	local polarity = abs(number)/number
-	local str_polarity = (polarity < 0) and '-' or ''
-	local str_whole = tostring(abs(number/FRACUNIT))
-	if maxdecimal == 0 then
-		return str_polarity..str_whole
-	end
-	local decimal = number%FRACUNIT
-	decimal = FRACUNIT + $
-	decimal = FixedMul($,FRACUNIT*10^maxdecimal)
-	decimal = $>>FRACBITS
-	local str_decimal = string.sub(decimal,2)
-	if str_decimal == string.rep("0",maxdecimal) then str_decimal = "" else str_decimal = "."..$ end
-	return str_polarity..str_whole..str_decimal
+	
+	return ("%."..max.."f"):format(str) --e.g. "%.4g"
 end
 
 function MenuItem_Slider:draw(x, y)
@@ -716,67 +731,77 @@ function MenuItem_Slider:draw(x, y)
 	
 	--only designed to be used with left alignment
 	if self.cvar then
-		local side = cachePatch("MENU_SLIDAR_SIDE")
-		local middle = cachePatch("MENU_SLIDAR_MIDDLE")
-		local handle = cachePatch("MENU_SLIDAR_HANDLE")
-		local scale = self.slider_scale
-		local x = x + self.parent.width - self.width
-		local y = y + self.scale * 8 / 2
-		
-		v.drawScaled(x, y, scale, side, 0)
-		v.drawStretched(x, y, self.width, scale, middle, 0)
-		v.drawScaled(x + self.width, y, scale, side, V_FLIP)
-		
-		local value = self.cvar.value
-		
-		if self._cvar_bounds == nil and self.slider_min == nil then
-			self._cvar_bounds = true
+		do
+			local side = cachePatch("MENU_SLIDAR_SIDE")
+			local middle = cachePatch("MENU_SLIDAR_MIDDLE")
+			local handle = cachePatch("MENU_SLIDAR_HANDLE")
+			local scale = self.slider_scale
+			local x = x + self.parent.width - self.width
+			local y = y + self.scale * 8 / 2
 			
-			local i = 0
+			v.drawScaled(x, y, scale, side, 0)
+			v.drawStretched(x, y, self.width, scale, middle, 0)
+			v.drawScaled(x + self.width, y, scale, side, V_FLIP)
 			
-			while true do
-				local value, strvalue = CV_GetPossibleValue(self.cvar, i)
+			local value = self.cvar.value
+			
+			if self._cvar_bounds == nil and self.slider_min == nil then
+				self._cvar_bounds = true
 				
-				if strvalue == nil then
-					break
+				local i = 0
+				
+				while true do
+					local value, strvalue = CV_GetPossibleValue(self.cvar, i)
+					
+					if strvalue == nil then
+						break
+					end
+					
+					if strvalue == "MIN" then
+						self.slider_min = value
+					elseif strvalue == "MAX" then
+						self.slider_max = value
+					end
+					
+					i = $ + 1
 				end
-				
-				if strvalue == "MIN" then
-					self.slider_min = value
-				elseif strvalue == "MAX" then
-					self.slider_max = value
-				end
-				
-				i = $ + 1
 			end
-		end
-		
-		local value_min = self.slider_min
-		local value_max = self.slider_max
-		local percent = get_percent(value, value_min, value_max)
-		v.drawScaled(x + FixedMul(self.width, percent), y, scale, handle)
-		
-		local defaultvalue = self.cvar.defaultvalue
-		
-		if self.cvar.flags & CV_FLOAT then
-			defaultvalue = tofixed($)
-		end
 			
-		if self.cvar.value ~= self.cvar.defaultvalue then
+			local value_min = self.slider_min
+			local value_max = self.slider_max
+			local percent = get_percent(value, value_min, value_max)
+			v.drawScaled(x + FixedMul(self.width, percent), y, scale, handle)
 			
-			local percent = get_percent(defaultvalue, value_min, value_max)
-			
-			v.drawScaled(x + FixedMul(self.width, percent), y, scale, handle, V_60TRANS)
-		end
-		
-		if self.parent and self.parent.selection == self.index then
-			local value = value
+			local defaultvalue = self.cvar.defaultvalue
 			
 			if self.cvar.flags & CV_FLOAT then
-				value = L_FixedDecimal(value, 2)
+				defaultvalue = tofixed($)
+			end
+				
+			if self.cvar.value ~= self.cvar.defaultvalue then
+				
+				local percent = get_percent(defaultvalue, value_min, value_max)
+				
+				v.drawScaled(x + FixedMul(self.width, percent), y, scale, handle, V_60TRANS)
 			end
 			
-			v.drawString(x + FixedMul(self.width, FU / 2), y - FU * 3, value, V_TRANSLUCENT, "thin-fixed-center")
+			if self.parent and self.parent.selection == self.index then
+				local value = value
+				
+				if self.cvar.flags & CV_FLOAT then
+					value = L_FixedDecimal(value, 2)
+				end
+				
+				v.drawString(x + FixedMul(self.width, FU / 2), y - FU * 3, value, V_TRANSLUCENT, "thin-fixed-center")
+			end
+		end
+		
+		--TODO: function
+		if self.parent and self.parent.selection == self.index then
+			local flags = cv_menucolor.value
+			local col = v.getStringColormap(flags)
+			self.font = $ or "STCFN" --hack
+			MenuItem_Text.drawArrows(self, x + self.parent.width + FU * 2, y, col)
 		end
 	end
 end
@@ -836,7 +861,7 @@ end
 
 function MenuItem_Textbox:getBounds()
 	local width = self.box.width--self._width or 0
-	local height = FU * 8 + self.box.height --inaccurate in some cases
+	local height = FU * 8 + FU * 2 + self.box.height --inaccurate in some cases
 	
 	return width, height
 end
@@ -846,7 +871,7 @@ function MenuItem_Textbox:draw(x, y)
 	
 	--only designed to be used with left alignment
 -- 	local align, align_string, factor = self.box:getAlignment()
-	self.box:draw(x + self.box.width / 2, y + FU * 8)
+	self.box:draw(x + self.box.width / 2, y + FU * 8 + FU * 2)
 	
 	local text_padding = self.box.corner_size
 	
@@ -857,18 +882,12 @@ function MenuItem_Textbox:draw(x, y)
 		self.box_label.label = $.."|"
 	end
 	
-	self.box_label:draw(x + text_padding, y + FU * 8 + min(text_padding, self.box.height / 2 - FU * 8 / 2))
+	self.box_label:draw(x + text_padding, y + FU * 8 + FU * 2 + min(text_padding, self.box.height / 2 - FU * 8 / 2))
 end
 
 MenuItem_Textbox.activate = MenuItem_Button.activate
 
 function MenuItem_Textbox:onKeyInput(key, name)
--- 	if not input.keyNumPrintable(key.num) then
--- 		return
--- 	end
-	
--- 	print(name)
-
 	if name == "backspace" then
 		self.value = $:sub(1, $:len() - 1)
 	end
@@ -1207,7 +1226,7 @@ local function ShowPopup(title, message, buttons)
 	if buttons then
 		for i, v in ipairs(buttons) do
 			table.insert(popup.buttons, 
-				MenuItem_UI_Button:new{body = v.body, action = v.action, keys = v.keys}
+				MenuItem_UI_Button:new{body = v.body, action = v.action, keys = v.keys, width = v.width}
 			)
 		end
 	end
