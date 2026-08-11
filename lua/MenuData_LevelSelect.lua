@@ -103,7 +103,7 @@ local function draw(self, v)
 	v.drawScaled(FU * 20 + FU * 100 * (xSel - 1), FU * 75 + FU * 80 * (row - 1) - scroll, FU / 2, v.cachePatch(patch))
 end
 
-Menu_LevelSelect = Menu:inherit()
+-- Menu_LevelSelect = Menu:inherit()
 
 menus.LevelSelect = Menu:new{
 	anchor = {x = "center", y = "bottom"},
@@ -163,10 +163,16 @@ menus.LevelSelect = Menu:new{
 			if id then
 				S_StartSound(nil, sfx_menu1, player)
 				
+				--[[
 				function next_action()
 					Menu_SetActive(false)
 -- 					G_ExitLevel(id, 1)
 					COM_BufInsertText(nil, "map "..id)
+				end
+				]]
+				
+				if self.link_params and self.link_params.on_select then
+					self.link_params.on_select(id)
 				end
 			else
 				scroll = $ + FU * 8

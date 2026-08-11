@@ -70,6 +70,8 @@ function Menu:new(a)
 	
 	a.x_offset = $ or 0
 	
+	a.link_params = $ or nil --this is set through menu links that have params
+	
 	a:updateItems()
 	
 	return a
@@ -300,6 +302,8 @@ function Menu:draw()
 	
 	--draw hybrid mode boxes
 	if pref_luamenu_layoutmode.value >= 2 then
+		--TODO: WHY are you doing this every frame
+		--also TODO: fix alignment
 		local hybrid_box_positions = {}
 		local box_index = 1
 		local padding = hybridPadding() * 3 / 2
@@ -450,5 +454,32 @@ function Menu:scrollBy(scrollby)
 		self.dest_scroll_time = 0--min($ + FU / 20, FU)
 		self.dest_scroll_origin = self.scroll
 		self.dest_scroll = min(max(py - FU * 50, 0), total_height - FU * 150)
+	end
+end
+
+--escapes out of the current menu
+function Menu:back()
+	if menus[current_menu] ~= self then return end
+
+	if self.parent then
+		assert(menus[self.parent], ("Menu:back: Could not resolve menu back link \"%s\"."):format(tostring(self.parent)))
+
+		if self.on_exit then
+			self:on_exit(self.parent)
+		end
+		
+		local old_menu = current_menu
+		current_menu, self.parent = self.parent, nil
+		
+		if menus[current_menu] and menus[current_menu].on_entry then
+			menus[current_menu]:on_entry(old_menu)
+		end
+		
+		if pref_luamenu_anims.value then
+			menus[current_menu].enter_anim = FU
+			menus[current_menu].exit_anim = 0
+		end
+	else
+		Menu_SetActive(false)
 	end
 end

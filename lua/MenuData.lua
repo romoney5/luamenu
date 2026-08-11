@@ -48,6 +48,15 @@ local function OnQuitGame(self)
 	})
 end
 
+--some preset menuitem conditions
+local function Cond_Singleplayer(self)
+	return not multiplayer
+end
+
+local function Cond_Multiplayer(self)
+	return multiplayer
+end
+
 --title screen menu
 
 menus.MainMenu = Menu:new{
@@ -226,6 +235,51 @@ menus.MultiplayerMenu = Menu:new{
 		MenuItem_Header:new{label = "Player setup"},
 		MenuItem_Button:new{label = "Player 1...", link = "MultiplayerMenu_P1Setup", spacing = FU * 2},
 		MenuItem_Button:new{label = "Player 2...", link = "MultiplayerMenu_P2Setup", spacing = FU * 2},
+	},
+}
+
+menus.MultiplayerMenu_HostInternet = Menu:new{
+	anchor = {x = "center", y = "top"},
+	width = FU * 320 - FU * 30 * 2,
+	height = FU * 200 - FU * 20 * 2,
+	title = "MULTIPLAYER",
+	
+	map_name = "MAP01",
+	
+	items = {
+		MenuItem_Header:new{label = "Server settings"},
+		MenuItem_Button:new{label = "Room...", link = "ServerBowser", spacing = FU * 2},
+		MenuItem_Textbox:new{label = "Server Name", desc = "Server name as seen in the Master Server", cvar = CV_FindVar("servername"), spacing = FU * 2},
+		MenuItem_Button:new{label = "Max Players", desc = "Maximum amount of players in the server", cvar = CV_FindVar("maxplayers"), spacing = FU * 2},
+		MenuItem_Button:new{label = "Allow Add-on Downloading", cvar = CV_FindVar("downloading"), spacing = FU * 2 + FU * 10},
+		--awkward spacing
+		MenuItem_Header:new{label = "Co-op - Greenflower Zone 1"}, --on_entry
+		MenuItem_Button:new{label = "Select Gametype/Level...", link = "LevelSelect",
+		link_params = function(self, menu)
+			--kinda convoluted but it lets me take advantage of
+			--lua's ridiculously good scope features
+			return {
+				on_select = function(id)
+					menu:back()
+					
+					self.parent.map_name = G_BuildMapName(id)
+				end
+			}
+		end,
+		on_draw = function(self, x, y)
+			local width, height = self:getBounds()
+			v.drawScaled(x + width + FU * 4, y, FU / 2, v.cachePatch(self.parent.map_name.."P"))
+		end, height = FU * 8 + FU * 16, spacing = FU * 2},
+		MenuItem_Button:new{label = "More Options...", link = "OptionsMenu_Server", spacing = FU * 2},
+		MenuItem_Button:new{label = "Start", action = function(self)
+			Banpyura.Luamenu_SetMultiplayer(true, true)
+			
+			--TODO: this takes weirdly long with wipes 1
+			return function()
+				Menu_SetActive(false)
+				COM_BufInsertText(nil, "map "..self.parent.map_name)
+			end
+		end, spacing = FU * 2},
 	},
 }
 
@@ -509,6 +563,9 @@ menus.OptionsMenu_Luamenu_DevTools = Menu:new{
 			if msg then
 				ShowPopup(self.label, tostring(msg))
 			end
+		end, spacing = FU * 2},
+		MenuItem_Button:new{label = "Go to Main Menu", desc = "", action = function(self)
+			Menu_GotoLink("MainMenu") --this is an action to not trip up verify menu links
 		end, spacing = FU * 2},
 		
 		MenuItem_Header:new{label = "Display"},
@@ -1044,12 +1101,24 @@ menus.SP_MainMenu = Menu:new{
 				self.level_title_label:draw(x + FU * 8, y + FU * 8 - FU)
 			end},
 		
-		MenuItem_Button:new{label = "Pandora's Box...", link = "SP_PandorasBox"},
+		MenuItem_Button:new{label = "Pandora's Box...", link = "SP_PandorasBox", condition = Cond_Singleplayer},
 		MenuItem_Button:new{label = "Emblem Hints...", link = "SP_EmblemHints"},
-		MenuItem_Button:new{label = "Level Select...", link = "LevelSelect", spacing = FU * 8},
+		MenuItem_Button:new{label = "Level Select...", link = "LevelSelect",
+		link_params = function(self, menu)
+			return {
+				on_select = function(id)
+					--what the bigma
+					function next_action()
+						Menu_SetActive(false)
+						COM_BufInsertText(nil, "map "..id)
+					end
+				end
+			}
+		end, spacing = FU * 8},
 		
 		MenuItem_Button:new{label = "Continue", link = ""},
-		MenuItem_Button:new{label = "Retry", action = OnRetry},
+		MenuItem_Button:new{label = "Retry", action = OnRetry, condition = Cond_Singleplayer},
+		MenuItem_Button:new{label = "Player Setup", link = "MultiplayerMenu_P1Setup", condition = Cond_Multiplayer},
 		MenuItem_Button:new{label = "Options", link = "OptionsMenu", spacing = FU * 8},
 		
 		MenuItem_Button:new{label = "Return to Title", action = OnReturnToTitle},

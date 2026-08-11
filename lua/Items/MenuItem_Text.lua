@@ -25,6 +25,8 @@ function MenuItem_Text:new(a)
 	a.color = $ or nil
 	a.force_lowercase = $ or false
 	
+	a.height = $ or FU * 8
+	
 	a.on_draw = $ or nil
 	
 	return a
@@ -44,7 +46,7 @@ end
 
 function MenuItem_Text:getBounds()
 	local width = self._width or 0--FU * v.stringWidth(self.label, self:getFlags(), "normal")
-	local height = FU * 8 --inaccurate in some cases
+	local height = self.height --inaccurate in some cases
 	
 	return width, height
 end

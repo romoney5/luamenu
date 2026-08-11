@@ -16,6 +16,8 @@ function MenuItem:new(a)
 	
 	a.align_string = $ or ""
 	
+	a.condition = $ or nil --see Items/Menu.lua
+	
 	return a
 end
 

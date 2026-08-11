@@ -48,7 +48,13 @@ function MenuItem_Button:activate(increment)
 	end
 
 	if self.link then
-		Menu_GotoLink(self.link)
+		local params = self.link_params
+		
+		if type(params) == "function" then
+			params = params(self, menus[self.link])
+		end
+		
+		Menu_GotoLink(self.link, params)
 	end
 	
 	local option = self.pref or self.cvar

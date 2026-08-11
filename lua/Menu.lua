@@ -163,7 +163,7 @@ function Menu_SetActive(active)
 	end
 end
 
-function Menu_GotoLink(link)
+function Menu_GotoLink(link, params)
 	if not menus[link] then
 		ShowPopup("Menu_GotoLink", ("Could not find menu link \"%s\".\n\nSome menus are currently unimplemented."):format(tostring(link)))
 		return
@@ -180,6 +180,8 @@ function Menu_GotoLink(link)
 	menu = menus[current_menu]
 	
 	menu.parent = old_menu
+	
+	menu.link_params = params
 
 	if menu.on_entry then
 		menu:on_entry(old_menu)
@@ -248,32 +250,11 @@ local function Input(key)
 		else
 			if not menuactive then return end
 		end
--- 		print(name)
 		
 		local menu = menus[current_menu]
 		assert(menu, ("Input: Invalid menu \"%s\"!"):format(tostring(current_menu))) --r
 		
-		if menu.parent then
-			assert(menus[menu.parent], ("Input: Could not resolve menu back link \"%s\"."):format(tostring(menu.parent))) --r
-
-			if menu.on_exit then
-				menu:on_exit(menu.parent)
-			end
-			
-			local old_menu = current_menu
-			current_menu, menu.parent = menu.parent, nil
-			
-			if menus[current_menu] and menus[current_menu].on_entry then
-				menus[current_menu]:on_entry(old_menu)
-			end
-			
-			if pref_luamenu_anims.value then
-				menus[current_menu].enter_anim = FU
-				menus[current_menu].exit_anim = 0
-			end
-		else
-			Menu_SetActive(false)
-		end
+		menu:back()
 		
 		return
 	elseif name == "enter" and not menuactive then
