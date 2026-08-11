@@ -35,7 +35,6 @@ end
 
 function MenuItem:getAlignment()
 	local align = self.align
-	local align_string = ""
 	
 	local parent_width = self.parent and self.parent.width or 0
 	
@@ -45,20 +44,17 @@ function MenuItem:getAlignment()
 	
 	if align == "center" then
 		x = 0
-		align_string = "-center" --TODO: remove
 		factor = -FU / 2
 	elseif align == "left" then
 		x = 0 - parent_width / 2
 -- 		x = width / 2
-		align_string = ""
 		factor = 0
 	elseif align == "right" then
 -- 		x = 0 + parent_width
-		align_string = "-right"
 		factor = -FU
 	end
 	
-	return x, align_string, factor
+	return x, factor
 end
 
 function MenuItem:draw()

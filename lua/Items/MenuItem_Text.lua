@@ -170,7 +170,7 @@ function MenuItem_Text:draw(x, y)
 	
 	--run once: once to draw,
 	for i, line in ipairs(self.text_layout) do
-		local _, align_string, factor = self:getAlignment()
+		local _, factor = self:getAlignment()
 		local align_x = FixedMul(FixedMul(line.width, factor), self.scale)
 		
 		for ii = 1, #line, 2 do

@@ -97,7 +97,7 @@ function Menu:updateItems()
 		
 		if item then
 			local py = self:getYPositionAt(i)
-			local align, align_string, factor = item:getAlignment()
+			local align, factor = item:getAlignment()
 			
 			local width, height = item:getBounds()
 			
@@ -310,15 +310,24 @@ function Menu:draw()
 		
 		for i, item in menuIpairs(self.items) do
 			local py = self:getYPositionAt(i)
-			local align, align_string, factor = item:getAlignment()
--- 			local width, height = item:getBounds()
+			local align, factor = item:getAlignment()
+			local width, height = item:getBounds()
+			local align_x = FixedMul(FixedMul(width, factor), item.scale or FU)
 			local height = self:getHeightOf(i)
 			local spacing_threshold = FU * 2
+			local box_width = self.width
+			
+			if factor < 0 then
+				box_width = width
+			end
+			
 			height = $ + min(spacing_threshold, item.spacing)
 			
 			if item:canSelect() then
-				hybrid_box_positions[box_index] = $ or {width = self.width, height = -padding, x = align, y = py}
+				hybrid_box_positions[box_index] = $ or {width = box_width, height = -padding, x = align, y = py}
 				
+				hybrid_box_positions[box_index].x = min($, align + align_x)
+				hybrid_box_positions[box_index].width = max($, box_width)
 				hybrid_box_positions[box_index].height = $ + height
 			end
 			
@@ -326,7 +335,6 @@ function Menu:draw()
 				box_index = $ + 1
 			end
 			
--- 			local align_x = FixedMul(FixedMul(width, factor), item.scale or FU)
 -- 			width = self.width
 -- 			v.drawFixedFill(x + align + align_x - FU, y + py - FU, width + FU * 2, height + FU * 2, cv_menubgcolor.value) --top/bottom edges
 		end
@@ -338,24 +346,12 @@ function Menu:draw()
 			local fixed_corner_size = min(min(corner_size, height / 2), width / 2)
 			MenuItem_Box:drawBox(x + box.x - padding, y + box.y - padding, width, height, cv_menubgcolor.value - 1, fixed_corner_size)
 		end
-		
--- 		for i, v in ipairs(hybrid_box_info) do
--- 			local item = self.items[i]
--- 			local py = self:getYPositionAt(i)
--- 			local align, align_string, factor = item:getAlignment()
--- 			local width, height = item:getBounds()
--- 			local align_x = FixedMul(FixedMul(width, factor), item.scale or FU)
--- 			width = self.width
--- 			height = $ + min(FU * 2, item.spacing)
--- 			v.drawFixedFill(x + align + align_x - FU, y + py - FU, width + FU * 2, height + FU * 2, cv_menubgcolor.value) --top/bottom edges
--- 		end
 	end
 	
 	--draw all items
 	for i, item in menuIpairs(self.items) do
 		local py = self:getYPositionAt(i)
-		local align, align_string, factor = item:getAlignment()
-		item.align_string = align_string
+		local align, factor = item:getAlignment()
 		item:draw(x + align, y + py)
 		
 		local width, height = item:getBounds()

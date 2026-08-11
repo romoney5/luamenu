@@ -34,7 +34,7 @@ function MenuItem_Textbox:draw(x, y)
 -- 	end
 	
 	--only designed to be used with left alignment
--- 	local align, align_string, factor = self.box:getAlignment()
+-- 	local align, factor = self.box:getAlignment()
 	self.box:draw(x + self.box.width / 2, y + FU * 8 + FU * 2)
 	
 	local text_padding = self.box.corner_size
