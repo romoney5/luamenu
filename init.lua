@@ -57,6 +57,11 @@ local function load(dir, path)
 	end
 end
 
+if not _G.gks_luamenu_supported or not _G.Banpyura then
+	print("This build does not support Luamenu or is not Banpyura.")
+	return
+end
+
 load(directory, "")
 
 print("Luamenu by romoney5")

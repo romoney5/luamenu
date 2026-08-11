@@ -3,7 +3,6 @@
 
 --remember, the environment of all luamenu scripts is _G.luamenu
 
-if not _G.gks_luamenu_supported or not _G.Banpyura then return end
 _G.gks_luamenu = true
 
 if not loaded then
