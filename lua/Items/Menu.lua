@@ -198,13 +198,18 @@ function Menu:updateScroll()
 	
 	local total_height = self:getYPositionAt(#self.items + 1)
 	
-	if not mouse_drag.dragging and self.dest_scroll_time == FU and total_height > self.height then
-		if self.scroll > total_height - FU * 150 then
-			self:resetScroll()
-			self.dest_scroll = total_height - FU * 150
-		end
-		
-		if self.scroll < 0 then
+	if not mouse_drag.dragging and self.dest_scroll_time == FU then
+		--if the menu is tall enough to be scrollable, scroll
+		if total_height > self.height then
+			if self.scroll > total_height - FU * 150 then
+				self:resetScroll()
+				self.dest_scroll = total_height - FU * 150
+			end
+			
+			if self.scroll < 0 then
+				self:resetScroll()
+			end
+		else
 			self:resetScroll()
 		end
 	end
