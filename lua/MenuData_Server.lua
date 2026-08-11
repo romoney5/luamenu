@@ -767,6 +767,6 @@ menus.ServerBowser = Menu:new{
 	end,
 	
 	items = {
-		MenuItem_Button:new{label = "Server browser...", link = "ServerBowser", spacing = FU * 2},
+		--MenuItem_Button:new{label = "Server browser...", link = "ServerBowser", spacing = FU * 2},
 	},
 }

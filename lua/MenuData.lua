@@ -98,7 +98,7 @@ menus.SingleplayerMenu_StartGame = Menu:new{
 	anchor = {x = "center", y = "bottom"},
 	
 	items = {
-		MenuItem_Button:new{label = "Start Game", align = "center", link = "SingleplayerMenu"},
+		--MenuItem_Button:new{label = "Start Game", align = "center", link = "SingleplayerMenu"},
 	},
 	
 	on_draw = function(self, v)
@@ -307,7 +307,7 @@ menus.MultiplayerMenu_Rejoin = Menu:new{
 			end
 		},
 		
-		MenuItem_Button:new{label = "Server browser...", link = "ServerBowser", spacing = FU * 2},
+		--MenuItem_Button:new{label = "Server browser...", link = "ServerBowser", spacing = FU * 2},
 	},
 }
 
@@ -525,6 +525,8 @@ menus.OptionsMenu_Luamenu_DevTools = Menu:new{
 					if menus[v.link] then
 						if stack >= 32 then
 							table.insert(bad, menu..">"..(v.label or ("Item "..i)).." (overflow)")
+							
+							break
 						else
 							self:verify_menu(v.link, bad, stack + 1)
 						end
@@ -541,7 +543,11 @@ menus.OptionsMenu_Luamenu_DevTools = Menu:new{
 				self:verify_menu(i, bad, 1)
 			end
 			
-			ShowPopup("Verify Menu Links", "The following menu items have invalid links:\n\n"..table.concat(bad, "\n"))
+			--print it into the console so you can see it better
+			local out = "The following menu items have invalid links:\n\n"..table.concat(bad, "\n")
+			print(out)
+			
+			ShowPopup("Verify Menu Links", out)
 			
 			current_popup.width = FU * 300
 		end, spacing = FU * 2},
