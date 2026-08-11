@@ -373,7 +373,6 @@ menus.OptionsMenu = Menu:new{
 		MenuItem_Button:new{label = "Sound Options...", desc = "Change audio settings", link = "OptionsMenu_Sound", spacing = FU * 2 + FU * 10},
 		
 		MenuItem_Button:new{label = "Server Options...", desc = "Change server hosting settings", link = "OptionsMenu_Server", spacing = FU * 2 + FU * 10},
-		--MenuItem_Button:new{label = "Server Options...?", condition = do return leveltime % 2 end, desc = "Change server hosting settings", link = "OptionsMenu_Server", spacing = FU * 2 + FU * 10},
 		
 		MenuItem_Button:new{label = "Data Options...", desc = "Manage data, screenshots, etc.", link = "OptionsMenu_Data", spacing = FU * 2 + FU * 10},
 		
@@ -449,6 +448,93 @@ menus.OptionsMenu_Banpyura = Menu:new{
 		
 		MenuItem_Header:new{label = "Diagnostic"},
 		MenuItem_Button:new{label = "Network Statistics", desc = "Show misc. network info", cvar = CV_FindVar("netstat"), spacing = FU * 2},
+	},
+}
+
+local function Cond_Cvar_Dependency(self) return self.dependency.string == self.dependency_string end
+
+menus.OptionsMenu_Data = Menu:new{
+	anchor = {x = "center", y = "top"},
+	width = FU * 320 - FU * 60 * 2,
+	height = FU * 200 - FU * 20 * 2,
+	title = "DATA OPTIONS",
+	
+	items = {
+		MenuItem_Button:new{label = "Add-on Options...", desc = "", link = new_menu("OptionsMenu_Data_Addons", Menu:new{
+			anchor = {x = "center", y = "top"},
+			width = FU * 320 - FU * 30 * 2,
+			height = FU * 200 - FU * 20 * 2,
+			title = "ADD-ON OPTIONS",
+			
+			items = {
+				MenuItem_Header:new{label = "Menu"},
+				MenuItem_Button:new{label = "Location", desc = "", cvar = CV_FindVar("addons_option"), spacing = FU * 2},
+				MenuItem_Textbox:new{label = "Custom Folder", desc = "", cvar = CV_FindVar("addons_folder"),
+					dependency = CV_FindVar("addons_option"), --custom variable
+					dependency_string = "CUSTOM",
+					condition = Cond_Cvar_Dependency,
+					spacing = FU * 2},
+				MenuItem_Button:new{label = "Identify add-ons via", desc = "", cvar = CV_FindVar("addons_md5"), spacing = FU * 2},
+				MenuItem_Button:new{label = "Show unsupported file types", desc = "", cvar = CV_FindVar("addons_showall"), spacing = FU * 2},
+				
+				MenuItem_Header:new{label = "Search"},
+				MenuItem_Button:new{label = "Matching", desc = "", cvar = CV_FindVar("addons_search_type"), spacing = FU * 2},
+				MenuItem_Button:new{label = "Case-sensitive", desc = "", cvar = CV_FindVar("addons_search_case"), spacing = FU * 2},
+			},
+		}), spacing = FU * 2},
+		MenuItem_Button:new{label = "Screenshot Options...", desc = "", link = new_menu("OptionsMenu_Data_Screenshots", Menu:new{
+			anchor = {x = "center", y = "top"},
+			width = FU * 320 - FU * 30 * 2,
+			height = FU * 200 - FU * 20 * 2,
+			title = "SCREENSHOT OPTIONS",
+			
+			items = {
+				MenuItem_Header:new{label = "General"},
+				MenuItem_Button:new{label = "Use color profile", desc = "", cvar = CV_FindVar("screenshot_colorprofile"), spacing = FU * 2},
+				
+				MenuItem_Header:new{label = "Screenshots (F8)"},
+				MenuItem_Button:new{label = "Storage Location", desc = "", cvar = CV_FindVar("screenshot_option"), spacing = FU * 2},
+				MenuItem_Textbox:new{label = "Custom Folder", desc = "", cvar = CV_FindVar("screenshot_folder"),
+					dependency = CV_FindVar("screenshot_option"), --custom variable
+					dependency_string = "CUSTOM",
+					condition = Cond_Cvar_Dependency,
+					spacing = FU * 2},
+				MenuItem_Button:new{label = "Memory Level", desc = "", cvar = CV_FindVar("png_memory_level"), spacing = FU * 2},
+				MenuItem_Button:new{label = "Compression Level", desc = "", cvar = CV_FindVar("png_compress_level"), spacing = FU * 2},
+				MenuItem_Button:new{label = "Strategy", desc = "", cvar = CV_FindVar("png_strategy"), spacing = FU * 2},
+				MenuItem_Button:new{label = "Window Size", desc = "", cvar = CV_FindVar("png_window_size"), spacing = FU * 2},
+				
+				MenuItem_Header:new{label = "Movie Mode (F9)"},
+				MenuItem_Button:new{label = "Storage Location", desc = "", cvar = CV_FindVar("movie_option"), spacing = FU * 2},
+				MenuItem_Textbox:new{label = "Custom Folder", desc = "", cvar = CV_FindVar("movie_folder"),
+					dependency = CV_FindVar("movie_option"), --custom variable
+					dependency_string = "CUSTOM",
+					condition = Cond_Cvar_Dependency,
+					spacing = FU * 2},
+				MenuItem_Button:new{label = "Capture Mode", desc = "", cvar = CV_FindVar("moviemode_mode"), spacing = FU * 2},
+				--yes, this looks weird.. but i want to keep everything as self-contained as possible
+				--gif
+				MenuItem_Button:new{label = "Downscaling", desc = "", cvar = CV_FindVar("gif_downscale"),
+					dependency = CV_FindVar("moviemode_mode"), dependency_string = "GIF", condition = Cond_Cvar_Dependency, spacing = FU * 2},
+				MenuItem_Button:new{label = "Region Optimizing", desc = "", cvar = CV_FindVar("gif_optimize"),
+					dependency = CV_FindVar("moviemode_mode"), dependency_string = "GIF", condition = Cond_Cvar_Dependency, spacing = FU * 2},
+				MenuItem_Button:new{label = "Local Color Table", desc = "", cvar = CV_FindVar("gif_localcolortable"),
+					dependency = CV_FindVar("moviemode_mode"), dependency_string = "GIF", condition = Cond_Cvar_Dependency, spacing = FU * 2},
+				--apng
+				MenuItem_Button:new{label = "Downscaling", desc = "", cvar = CV_FindVar("apng_downscale"),
+					dependency = CV_FindVar("moviemode_mode"), dependency_string = "aPNG", condition = Cond_Cvar_Dependency, spacing = FU * 2},
+				MenuItem_Button:new{label = "Memory Level", desc = "", cvar = CV_FindVar("apng_memory_level"),
+					dependency = CV_FindVar("moviemode_mode"), dependency_string = "aPNG", condition = Cond_Cvar_Dependency, spacing = FU * 2},
+				MenuItem_Button:new{label = "Compression Level", desc = "", cvar = CV_FindVar("apng_compress_level"),
+					dependency = CV_FindVar("moviemode_mode"), dependency_string = "aPNG", condition = Cond_Cvar_Dependency, spacing = FU * 2},
+				MenuItem_Button:new{label = "Strategy", desc = "", cvar = CV_FindVar("apng_strategy"),
+					dependency = CV_FindVar("moviemode_mode"), dependency_string = "aPNG", condition = Cond_Cvar_Dependency, spacing = FU * 2},
+				MenuItem_Button:new{label = "Window Size", desc = "", cvar = CV_FindVar("apng_window_size"),
+					dependency = CV_FindVar("moviemode_mode"), dependency_string = "aPNG", condition = Cond_Cvar_Dependency, spacing = FU * 2},
+			},
+		}), spacing = FU * 2 + FU * 10},
+		
+		MenuItem_Button:new{label = "\x85".."Erase Data...", desc = "Noo!", link = "OptionsMenu_Data_Erase", spacing = FU * 2},
 	},
 }
 
