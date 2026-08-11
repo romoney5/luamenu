@@ -80,7 +80,7 @@ end
 --this should be called when adding/removing items
 function Menu:updateItems()
 	--link the items to the menu page
-	for i, item in menuIpairs(self.items) do
+	for i, item in ipairs(self.items) do
 		item.parent = self
 		item.index = i
 	end
