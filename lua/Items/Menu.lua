@@ -339,9 +339,6 @@ function Menu:draw()
 			if (not item:canSelect() or item.spacing > spacing_threshold) and hybrid_box_positions[box_index] then
 				box_index = $ + 1
 			end
-			
--- 			width = self.width
--- 			v.drawFixedFill(x + align + align_x - FU, y + py - FU, width + FU * 2, height + FU * 2, cv_menubgcolor.value) --top/bottom edges
 		end
 		
 		local corner_size = FixedMul(FU * 5, pref_luamenu_rounded.value)
@@ -349,7 +346,7 @@ function Menu:draw()
 			local width = box.width + padding * 2
 			local height = box.height + padding * 2
 			local fixed_corner_size = min(min(corner_size, height / 2), width / 2)
-			MenuItem_Box:drawBox(x + box.x - padding, y + box.y - padding, width, height, cv_menubgcolor.value - 1, fixed_corner_size)
+			MenuItem_Box:drawBox(x + box.x - padding, y + box.y - padding, width, height, cv_menubgcolor.value - 2, fixed_corner_size)
 		end
 	end
 	

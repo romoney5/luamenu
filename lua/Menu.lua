@@ -198,7 +198,7 @@ loaded = true
 
 
 local function DrawSpikes(rot, patch, ox, oy, scroll, flags)
-	local col = v.getColormap(nil, nil, "Menu_Translation_"..cv_menubgcolor.value)-- - 2)
+	local col = v.getColormap(nil, nil, "Menu_Translation_"..cv_menubgcolor.value - 1)-- - 2)
 	local bg2 = cachePatch("MENU_SPIKE")
 	local bg = cachePatch(patch)
 	local dimension = bg2.height - 1
@@ -346,6 +346,13 @@ addHook("TextInput", function(text)
 	end
 end)
 
+local function Rotate(x, y, angle)
+	local tmpx = FixedMul(x, cos(angle)) - FixedMul(y, sin(angle))
+	y = FixedMul(x, sin(angle)) + FixedMul(y, cos(angle))
+
+	return tmpx, y
+end
+
 local function Drawer(drawer, player)
 	if not gks_luamenu then return end
 	
@@ -381,8 +388,40 @@ local function Drawer(drawer, player)
 	
 	if pref_luamenu_bgdecos.value then
 		local speed = FU / TICRATE / 2
-		DrawSpikes(ANG1 * 10, "MENU_SPIKE_2", 0, FU * 155, (FixedMul(menu_time, speed) + menu.scroll / 64) % FU, V_SNAPTOBOTTOM|V_SNAPTOLEFT)
-		DrawSpikes(ANG1 * 10 + ANGLE_180, "MENU_SPIKE_3", FU * 270, FU * 40, (FixedMul(menu_time, speed) + menu.scroll / 64) % FU, V_SNAPTOTOP|V_SNAPTORIGHT)
+		
+		local checker_speed = FU / TICRATE / 3
+		local patch = v.cachePatch("MENU_ROADBLOX")
+		local checker_size = FU * 64--48
+		local color1 = cv_menubgcolor.value - 1
+		local color2 = cv_menubgcolor.value - 3
+		color1 = v.getColormap(nil, nil, "Menu_Translation_"..(color1 & 255))
+		color2 = v.getColormap(nil, nil, "Menu_Translation_"..(color2 & 255))
+		
+		local start_x, start_y = ScreenToDisplay(0, 0)
+		local end_x, end_y = ScreenToDisplay(v.width(), v.height())
+		
+		local offset_x = FixedMul(FixedMul(menu_time, checker_speed) % (FU * 2), checker_size)
+		local offset_y = FixedMul((FixedMul(menu_time * 0, checker_speed) - menu.scroll / 256) % (FU * 2), checker_size)
+		
+		local checkered = false
+		
+		for x = (start_x - checker_size * 2), (end_x + checker_size), checker_size do
+			for y = (start_y - checker_size), (end_y + checker_size * 2), checker_size do
+				local color
+				if checkered then color = color1 else color = color2 end
+				
+				local new_x, new_y = Rotate(x + offset_x, y + offset_y, ANG10)
+				
+				--v.drawFixedFill(x + offset_x, y + offset_y, checker_size, checker_size, color|V_40TRANS)
+				v.drawScaled(new_x, new_y, FU, patch, V_60TRANS, color)
+				checkered = not checkered
+			end
+		end
+-- 		v.drawFixedFill(0, checker_size, checker_size, checker_size, color2|V_30TRANS)
+-- 		v.drawFixedFill(checker_size, checker_size, checker_size, checker_size, color1|V_30TRANS)
+		
+		DrawSpikes(ANG1 * 10, "MENU_SPIKE_2", 0, FU * 155, (FixedMul(menu_time, speed) + menu.scroll / 128) % FU, V_SNAPTOBOTTOM|V_SNAPTOLEFT)
+		DrawSpikes(ANG1 * 10 + ANGLE_180, "MENU_SPIKE_3", FU * 270, FU * 40, (FixedMul(menu_time, speed) + menu.scroll / 128) % FU, V_SNAPTOTOP|V_SNAPTORIGHT)
 	end
 	
 	menu:draw()

@@ -73,7 +73,6 @@ menus.MainMenu = Menu:new{
 	items = {
 		MenuItem_Button:new{label = "1  Player", align = "center", link = "SingleplayerMenu"},
 		MenuItem_Button:new{label = "Multiplayer", align = "center", link = "MultiplayerMenu"},
-		MenuItem_Button:new{label = "Level Selecttwo...", align = "center", link = "LevelSelect"},
 		MenuItem_Button:new{label = "Extras", align = "center", link = "ExtrasMenu"},
 		MenuItem_Button:new{label = "Addons", align = "center", link = "AddonsMenu"},
 		MenuItem_Button:new{label = "Options", align = "center", link = "OptionsMenu"},
@@ -91,6 +90,7 @@ menus.SingleplayerMenu = Menu:new{
 		MenuItem_Button:new{label = "Marathon Run", align = "center", link = "SingleplayerMenu_MarathonRun"},
 		MenuItem_Button:new{label = "Tutorial", align = "center", link = "SingleplayerMenu_Tutorial"}, --action
 		MenuItem_Button:new{label = "Statistics", align = "center", link = "SingleplayerMenu_Statistics"},
+		MenuItem_Button:new{label = "Level Selecttwo...", align = "center", link = "LevelSelect"},
 	},
 }
 
@@ -1292,17 +1292,4 @@ menus.SP_PandorasBox = Menu:new{
 						current_popup:close()
 						
 						--for some cool reason P_DestroyRobots isn't exposed, so..
-						DestroyRobots()
-						
-						return true
-					end
-				end},
-			})
-		end, spacing = FU * 2},
-		
-		MenuItem_Button:new{label = "Ultimate Cheat", desc = "", action = function(self)
-			Menu_SetActive(false)
-			COM_BufInsertText(nil, "quit")
-		end, spacing = FU * 2},
-	},
-}
+						DestroyRobot
