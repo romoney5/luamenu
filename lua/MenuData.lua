@@ -546,6 +546,23 @@ menus.OptionsMenu_Luamenu = Menu:new{
 	
 	show_version = true,
 	
+	on_draw = function(self, v)
+		local x, y = self:getPosition()
+		local py = self:getYPositionAt(#self.items)
+		
+		y = $ + py + FU * 150
+		
+		y = $ - self.scroll
+		
+		if y <= FU * 200 and not self.ooed and nick_loaded then
+			self.ooed = true
+			
+			S_StartSound(nil, sfx_omagad)
+		end
+		
+		v.drawScaled(x, y, FU, v.cachePatch("MENU_OO2"))
+	end,
+	
 	items = {
 		MenuItem_Header:new{label = "Visual"},
 		MenuItem_Button:new{label = "Background Decorations", desc = "Show visual decorations in the background", pref = pref_luamenu_bgdecos, spacing = FU * 2},
@@ -1292,4 +1309,17 @@ menus.SP_PandorasBox = Menu:new{
 						current_popup:close()
 						
 						--for some cool reason P_DestroyRobots isn't exposed, so..
-						DestroyRobot
+						DestroyRobots()
+						
+						return true
+					end
+				end},
+			})
+		end, spacing = FU * 2},
+		
+		MenuItem_Button:new{label = "Ultimate Cheat", desc = "", action = function(self)
+			Menu_SetActive(false)
+			COM_BufInsertText(nil, "quit")
+		end, spacing = FU * 2},
+	},
+}
